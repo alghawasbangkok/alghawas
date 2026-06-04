@@ -454,21 +454,30 @@ function HistoryTab({ history, onClear }) {
 function CloudCard({ flash }) {
   const [cfg, setCfg] = useState(() => store.cloudConfig());
   const [busy, setBusy] = useState(false);
-  const save = (next) => { setCfg(next); store.setCloudConfig(next); };
+  const save = (patch) => { const next = { ...cfg, ...patch }; setCfg(next); store.setCloudConfig(next); };
+  const ready = cfg.dbUrl && cfg.apiKey && cfg.email && cfg.password;
   const publishNow = () => {
-    if (!cfg.url) { flash("Add a Publish URL first"); return; }
+    if (!ready) { flash("Fill in all four fields first"); return; }
     setBusy(true);
-    store.push(store.load()).then(ok => { setBusy(false); flash(ok ? "Published to the cloud ✓" : "Publish failed — check the URL"); });
+    store.push(store.load()).then(ok => { setBusy(false); flash(ok ? "Published to all customers ✓" : "Publish failed — check the details below"); });
   };
   return (
     <div style={{ ...UI.card, padding: 16, marginBottom: 14 }}>
       <p style={{ margin: "0 0 12px", fontSize: 13.5, color: "var(--ink-2)", lineHeight: 1.6 }}>
-        <strong>Optional.</strong> Paste a cloud JSON link below and every Publish updates the <em>Delivery</em> and <em>Dine-in</em> menus for <em>all</em> customers automatically (both menus share the same data). Easiest free option: a Firebase Realtime Database URL ending in <code style={{ background: "var(--accent-soft)", padding: "1px 5px", borderRadius: 4 }}>/menu.json</code>. Leave blank to keep changes on this device only.
+        <strong>Optional — one-click publishing to all customers.</strong> Sign in with a Firebase account so only you can publish (both menus share the same data). Set this up once on your own device; your password is saved only here, never on the public site. Leave blank to keep changes on this device only.
       </p>
-      <Field label="Publish URL (GET/PUT JSON)" value={cfg.url} onChange={v => save({ ...cfg, url: v })} placeholder="https://your-db.firebaseio.com/menu.json" mono />
+      <Field label="Database URL" value={cfg.dbUrl} onChange={v => save({ dbUrl: v })} placeholder="https://alghawasbkk-default-rtdb.firebaseio.com" mono />
+      <div style={{ marginTop: 10 }}>
+        <Field label="Web API Key" value={cfg.apiKey} onChange={v => save({ apiKey: v })} placeholder="AIza…" mono />
+      </div>
+      <div className="grid2" style={{ marginTop: 10 }}>
+        <Field label="Login email" value={cfg.email} onChange={v => save({ email: v })} placeholder="you@email.com" />
+        <label style={{ display: "block" }}><span style={UI.label}>Login password</span>
+          <input type="password" autoComplete="new-password" value={cfg.password || ""} onChange={e => save({ password: e.target.value })} placeholder="••••••••" style={UI.input} /></label>
+      </div>
       <div style={{ display: "flex", gap: 10, marginTop: 12, flexWrap: "wrap" }}>
         <ToolBtn onClick={publishNow} primary>{busy ? "Publishing…" : "Publish now (Delivery + Dine-in)"}</ToolBtn>
-        {cfg.url && <ToolBtn onClick={() => save({ ...cfg, url: "" })} danger>Turn off live publishing</ToolBtn>}
+        {(cfg.dbUrl || cfg.apiKey) && <ToolBtn onClick={() => { setCfg({}); store.setCloudConfig({}); }} danger>Turn off live publishing</ToolBtn>}
       </div>
     </div>
   );
@@ -586,7 +595,7 @@ function Admin() {
     store.save(snapshot);
     const changes = summarize(lastLogged.current, snapshot);
     const entry = changes.length ? { time: Date.now(), changes: changes } : null;
-    const cloudOn = !!(store.cloudConfig().url);
+    const cloudOn = !!(store.cloudConfig().dbUrl);
     if (cloudOn) {
       setStatus("publishing");
       store.push(snapshot).then(ok => {
@@ -623,8 +632,8 @@ function Admin() {
   function publishNow() {
     clearTimeout(timer.current);
     persist(data);
-    const cloudOn = !!(store.cloudConfig().url);
-    flash(cloudOn ? "Publishing to Delivery + Dine-in…" : "Saved on this device — set a Publish URL in Settings to reach all customers");
+    const cloudOn = !!(store.cloudConfig().dbUrl);
+    flash(cloudOn ? "Publishing to Delivery + Dine-in…" : "Saved on this device — set up Live publishing in Settings to reach all customers");
   }
   function lock() { try { sessionStorage.removeItem("ghawas_admin_ok"); } catch (_) {} location.reload(); }
   function clearHistory() { if (confirm("Clear the change history log?")) { store.clearHistory(); setHistory([]); } }
