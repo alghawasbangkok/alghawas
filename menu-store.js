@@ -84,23 +84,30 @@
     // URL baked into the menu (brand.cloudUrl), so everyone gets live updates.
     pull: function () {
       var c = window.GHAWAS_STORE.cloudConfig();
-      var url = c.url || (window.GHAWAS_DEFAULT && window.GHAWAS_DEFAULT.brand && window.GHAWAS_DEFAULT.brand.cloudUrl) || "";
+      var base = c.dbUrl ? c.dbUrl.replace(/\/+$/, "") + "/menu.json" : "";
+      var url = base || (window.GHAWAS_DEFAULT && window.GHAWAS_DEFAULT.brand && window.GHAWAS_DEFAULT.brand.cloudUrl) || "";
       if (!url) return Promise.resolve(null);
       return fetch(url, { cache: "no-store" })
         .then(function (r) { return r.ok ? r.json() : null; })
         .then(function (j) { return isValid(j) ? j : null; })
         .catch(function () { return null; });
     },
-    // Publish the menu to the cloud endpoint (PUT JSON). Returns true on success.
+    // Publish the menu: sign in to Firebase Auth, then PUT with the ID token so
+    // only the owner's account can write (rules: { ".read": true, ".write": "auth != null" }).
     push: function (data) {
       var c = window.GHAWAS_STORE.cloudConfig();
-      if (!c.url) return Promise.resolve(false);
+      if (!c.dbUrl || !c.apiKey || !c.email || !c.password) return Promise.resolve(false);
       if (!isValid(data)) return Promise.resolve(false);
-      return fetch(c.url, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data)
-      }).then(function (r) { return r.ok; }).catch(function () { return false; });
+      return fetch("https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=" + encodeURIComponent(c.apiKey), {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: c.email, password: c.password, returnSecureToken: true })
+      }).then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (j) {
+          if (!j || !j.idToken) return false;
+          var url = c.dbUrl.replace(/\/+$/, "") + "/menu.json?auth=" + j.idToken;
+          return fetch(url, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) })
+            .then(function (rr) { return rr.ok; });
+        }).catch(function () { return false; });
     }
   };
 })();
