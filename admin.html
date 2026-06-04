@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Al Ghawas — Menu Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #f4f2ec;
+    --panel: #ffffff;
+    --ink: #1b1b18;
+    --ink-2: #66635c;
+    --ink-3: #9a968c;
+    --line: #e7e2d8;
+    --line-strong: #d8d2c5;
+    --accent: #0e5f66;
+    --accent-deep: #0a474d;
+    --accent-soft: #e9f1f0;
+    --danger: #b3402f;
+    --danger-soft: #fbecea;
+    --ok: #1f8a5b;
+    --sans: "Hanken Grotesk", system-ui, sans-serif;
+    --ar: "Tajawal", system-ui, sans-serif;
+    --radius: 12px;
+    --shadow: 0 1px 2px rgba(27,27,24,.04), 0 6px 22px rgba(27,27,24,.06);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: var(--sans); color: var(--ink); background: var(--bg);
+    font-size: 15px; line-height: 1.45; -webkit-font-smoothing: antialiased;
+  }
+  .ar { font-family: var(--ar); direction: rtl; unicode-bidi: isolate; }
+  button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+  input, textarea, select { font-family: inherit; font-size: 15px; }
+  ::selection { background: var(--accent); color: #fff; }
+  #root { min-height: 100vh; }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 0 16px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 560px) { .grid2 { grid-template-columns: 1fr; } }
+  input:focus, textarea:focus, select:focus { border-color: var(--accent) !important; }
+  .chip-tab[data-on="true"] { background: var(--accent); color: #fff; }
+</style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script src="menu-data.js"></script>
+  <script src="menu-store.js"></script>
+  <script type="text/babel" src="admin.jsx"></script>
+</body>
+</html>

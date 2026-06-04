@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="theme-color" content="#ffffff" />
+<title>Al Ghawas — Dine-In Menu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Hanken+Grotesk:wght@400;500;600;700&family=El+Messiri:wght@500;600;700&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #ffffff;
+    --paper: #faf8f4;
+    --ink: #1b1b18;
+    --ink-2: #6f6c64;
+    --ink-3: #9a968c;
+    --line: #ece8e0;
+    --line-strong: #ddd8cc;
+    --accent: #0e5f66;
+    --accent-deep: #0a474d;
+    --accent-soft: #eef4f3;
+    --gold: #9a7b3f;
+    --gutter: #efece6;
+    --bar-bg: rgba(255,255,255,.94);
+    --on-accent: #ffffff;
+    /* density rhythm */
+    --row-py: 15px;
+    --sec-pt: 30px;
+    --item-fs: 15px;
+    --hero-fs: 42px;
+    /* heading personality */
+    --head-tracking: .01em;
+    --head-transform: none;
+    --shadow: 0 1px 2px rgba(27,27,24,.04), 0 8px 30px rgba(27,27,24,.06);
+    --sans: "Hanken Grotesk", system-ui, sans-serif;
+    --serif: "Marcellus", Georgia, serif;
+    --ar: "Tajawal", system-ui, sans-serif;
+    --ar-serif: "El Messiri", "Tajawal", serif;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: var(--sans);
+    color: var(--ink);
+    background: var(--gutter);
+    font-size: 16px;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    transition: background .35s ease;
+  }
+  /* Phone column on wide screens, full-bleed on mobile */
+  #app-shell {
+    max-width: 460px;
+    margin: 0 auto;
+    min-height: 100vh;
+    background: var(--bg);
+    position: relative;
+    box-shadow: 0 0 0 1px rgba(0,0,0,.03), 0 30px 80px rgba(27,27,24,.14);
+    transition: background .35s ease;
+  }
+  @media (max-width: 520px) {
+    body { background: var(--bg); }
+    #app-shell { box-shadow: none; max-width: 100%; }
+  }
+
+  /* ---------- responsive scaffolding ---------- */
+  .desktop-only { display: none; }
+  .items-grid { display: grid; grid-template-columns: 1fr; }
+
+  /* Tablet: roomier column + two-up item grid */
+  @media (min-width: 760px) and (max-width: 1039px) {
+    #app-shell { max-width: 720px; }
+    .items-grid { grid-template-columns: 1fr 1fr; column-gap: 44px; }
+  }
+
+  /* Desktop: sidebar + content, full-width canvas */
+  @media (min-width: 1040px) {
+    body { background: #efece6; }
+    #app-shell { max-width: 1240px; }
+    .mobile-only { display: none !important; }
+    .desktop-only { display: block; }
+    .menu-layout { display: grid; grid-template-columns: 320px 1fr; align-items: start; }
+    .sidebar {
+      position: sticky; top: 0; align-self: start; max-height: 100vh;
+      overflow-y: auto; border-right: 1px solid var(--line); background: var(--bg);
+    }
+    .sidebar.noscroll::-webkit-scrollbar { display: none; }
+    .content { min-width: 0; }
+    .content > section { padding-left: 40px !important; padding-right: 40px !important; }
+    .items-grid { grid-template-columns: 1fr 1fr; column-gap: 52px; }
+    .hero-banner { border-bottom: 1px solid var(--line); }
+  }
+  @media (min-width: 1340px) {
+    #app-shell { max-width: 1340px; }
+  }
+  .ar { font-family: var(--ar); direction: rtl; unicode-bidi: isolate; }
+  button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+  ::selection { background: var(--accent); color: #fff; }
+  /* hide scrollbars on the tab strip */
+  .noscroll::-webkit-scrollbar { display: none; }
+  .noscroll { -ms-overflow-style: none; scrollbar-width: none; }
+  #root { min-height: 100vh; }
+</style>
+</head>
+<body>
+  <div id="app-shell"><div id="root"></div></div>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script src="menu-data.js"></script>
+  <script src="menu-store.js"></script>
+  <script>window.GHAWAS_MODE = "dinein";</script>
+  <script type="text/babel" src="tweaks-panel.jsx"></script>
+  <script type="text/babel" src="menu-app.jsx"></script>
+</body>
+</html>

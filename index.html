@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="theme-color" content="#ffffff" />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="apple-touch-icon" href="apple-touch-icon.png" />
+<link rel="icon" type="image/png" href="icon-192.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="Al Ghawas" />
+<title>Al Ghawas — Bangkok</title>
+<meta name="description" content="Al Ghawas — authentic Emirati & Khaleeji kitchen in Bangkok. View our dine-in menu or order delivery & pickup." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Hanken+Grotesk:wght@400;500;600;700&family=El+Messiri:wght@500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #ffffff; --paper: #faf8f4; --ink: #1b1b18; --ink-2: #6f6c64; --ink-3: #9a968c;
+    --line: #ece8e0; --line-strong: #ddd8cc; --accent: #0e5f66; --accent-deep: #0a474d; --accent-soft: #eef4f3;
+    --sans: "Hanken Grotesk", system-ui, sans-serif; --serif: "Marcellus", Georgia, serif; --ar-serif: "El Messiri", serif;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: var(--sans); color: var(--ink); background: #efece6; min-height: 100vh;
+    -webkit-font-smoothing: antialiased; display: flex; align-items: center; justify-content: center; padding: 24px;
+  }
+  .ar { font-family: var(--ar-serif); direction: rtl; unicode-bidi: isolate; }
+  a { text-decoration: none; color: inherit; }
+  .card {
+    width: 100%; max-width: 440px; background: var(--bg); border-radius: 26px;
+    box-shadow: 0 1px 2px rgba(27,27,24,.04), 0 30px 80px rgba(27,27,24,.16);
+    padding: 46px 30px 34px; text-align: center;
+  }
+  .eyebrow { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 20px; }
+  .eyebrow span.line { height: 1px; width: 34px; background: var(--line-strong); }
+  .eyebrow span.txt { font-size: 10.5px; letter-spacing: .34em; color: var(--ink-3); text-transform: uppercase; font-weight: 600; }
+  .logo-ar { font-size: 30px; color: var(--accent); line-height: 1; margin-bottom: 12px; }
+  h1 { margin: 0; font-family: var(--serif); font-weight: 400; font-size: 44px; letter-spacing: .14em; line-height: 1; }
+  .tagline { margin: 18px auto 0; max-width: 300px; font-size: 13.5px; color: var(--ink-2); line-height: 1.6; }
+  .hours { display: inline-flex; align-items: center; gap: 8px; margin-top: 18px; padding: 7px 16px; border-radius: 999px; background: var(--accent-soft); }
+  .hours .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+  .hours .txt { font-size: 12.5px; font-weight: 600; color: var(--accent-deep); }
+  .choose { font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: var(--ink-3); font-weight: 700; margin: 30px 0 14px; }
+  .btns { display: flex; flex-direction: column; gap: 12px; }
+  .opt {
+    display: flex; align-items: center; gap: 16px; padding: 18px 20px; border-radius: 16px;
+    border: 1px solid var(--line-strong); background: var(--paper); transition: transform .12s ease, box-shadow .15s ease, border-color .15s ease;
+  }
+  .opt:active { transform: scale(.98); }
+  .opt.primary { background: var(--accent); border-color: var(--accent); }
+  .opt .ico { width: 46px; height: 46px; border-radius: 13px; display: grid; place-items: center; flex: 0 0 auto; background: var(--bg); }
+  .opt.primary .ico { background: rgba(255,255,255,.16); }
+  .opt .label { flex: 1; text-align: left; }
+  .opt .label .t { font-family: var(--serif); font-size: 20px; letter-spacing: .02em; line-height: 1.1; }
+  .opt .label .s { font-size: 12.5px; color: var(--ink-3); margin-top: 3px; }
+  .opt.primary .label .t { color: #fff; }
+  .opt.primary .label .s { color: rgba(255,255,255,.8); }
+  .opt .arrow { flex: 0 0 auto; color: var(--ink-3); }
+  .opt.primary .arrow { color: rgba(255,255,255,.85); }
+  .foot { margin-top: 26px; font-size: 11.5px; color: var(--ink-3); letter-spacing: .03em; line-height: 1.6; }
+  .bookmark { width: 100%; margin-top: 12px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 13px; border-radius: 13px; border: 1px dashed var(--line-strong); background: var(--bg); color: var(--ink-2); font-size: 13.5px; font-weight: 600; font-family: var(--sans); cursor: pointer; }
+  .bookmark:active { transform: scale(.98); }
+  #hint { display: none; margin-top: 12px; font-size: 12.5px; color: var(--accent-deep); background: var(--accent-soft); border-radius: 10px; padding: 11px 14px; line-height: 1.5; }
+  @media (max-width: 480px) { body { background: var(--bg); padding: 0; } .card { box-shadow: none; max-width: 100%; min-height: 100vh; border-radius: 0; display: flex; flex-direction: column; justify-content: center; } }
+</style>
+</head>
+<body>
+  <main class="card">
+    <div id="ln-banner" style="display:none;background:var(--accent);color:#fff;text-align:center;font-size:13px;font-weight:600;padding:9px 14px;border-radius:12px;margin-bottom:18px;"></div>
+    <div class="eyebrow"><span class="line"></span><span class="txt">Est. Bangkok</span><span class="line"></span></div>
+    <div class="ar logo-ar" id="ln-logo">الغوّاص</div>
+    <h1 id="ln-name">AL&nbsp;GHAWAS</h1>
+    <p class="tagline"><span id="ln-tagline">Authentic Emirati &amp; Khaleeji kitchen.</span><br /><span class="ar" id="ln-artag">مطعم و مطبخ</span></p>
+    <div class="hours"><span class="dot" id="ln-dot"></span><span class="txt" id="hours">Open daily · 8:00 AM – 2:00 AM</span></div>
+
+    <div class="choose" id="ln-prompt">How would you like to dine?</div>
+    <div class="btns">
+      <a class="opt primary" href="delivery.html">
+        <span class="label"><div class="t" id="ln-del-t">Delivery &amp; Pickup</div><div class="s" id="ln-del-s">Order on WhatsApp · we deliver or you collect</div></span>
+        <span class="arrow"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
+      </a>
+      <a class="opt" href="dinein.html">
+        <span class="label"><div class="t" id="ln-dine-t">Dine-In Menu</div><div class="s" id="ln-dine-s">Browse the full menu at your table</div></span>
+        <span class="arrow"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
+      </a>
+    </div>
+
+    <button class="bookmark" id="bookmark">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1z"/></svg>
+      Save this menu to your phone
+    </button>
+    <div id="hint"></div>
+
+    <div class="foot" id="foot">Halal · Nana, Sukhumvit · Bangkok</div>
+  </main>
+
+  <script src="menu-data.js"></script>
+  <script src="menu-store.js"></script>
+  <script>
+    try {
+      var d = window.GHAWAS_STORE.load();
+      var h = d.brand.hours;
+      if (h) {
+        document.getElementById("hours").textContent = (h.open || "") + " – " + (h.close || "");
+        function pHM(s){ if(!s) return null; var m=String(s).split(":"); return (parseInt(m[0],10)||0)*60+(parseInt(m[1],10)||0); }
+        if (h.open24 && h.close24) {
+          var o=pHM(h.open24), c=pHM(h.close24), now=new Date(), mins=now.getHours()*60+now.getMinutes();
+          var isOpen = (c>o) ? (mins>=o && mins<c) : (mins>=o || mins<c);
+          var dot=document.getElementById("ln-dot");
+          if(dot) dot.style.background = isOpen ? "#1f8a5b" : "#c0432f";
+          document.getElementById("hours").textContent = (isOpen ? "Open now" : "Closed") + " · " + (h.open||"") + " – " + (h.close||"");
+        }
+      }
+      if (d.brand.announcement) { var bn=document.getElementById("ln-banner"); bn.textContent=d.brand.announcement; bn.style.display="block"; }
+      var H = d.brand.home || {};
+      function setT(id, val) { if (val) { var e = document.getElementById(id); if (e) e.textContent = val; } }
+      if (d.brand.ar) document.getElementById("ln-logo").textContent = d.brand.ar;
+      if (d.brand.name) document.getElementById("ln-name").textContent = d.brand.name;
+      setT("ln-artag", d.brand.arTagline);
+      setT("ln-tagline", H.tagline);
+      setT("ln-prompt", H.prompt);
+      setT("ln-del-t", H.deliveryTitle);
+      setT("ln-del-s", H.deliverySub);
+      setT("ln-dine-t", H.dineTitle);
+      setT("ln-dine-s", H.dineSub);
+      setT("foot", H.foot);
+    } catch (e) {}
+
+    var deferred = null;
+    window.addEventListener("beforeinstallprompt", function (e) { e.preventDefault(); deferred = e; });
+    window.addEventListener("appinstalled", function () { showHint("Added to your home screen ✓"); });
+    if ("serviceWorker" in navigator) { try { navigator.serviceWorker.register("sw.js"); } catch (e) {} }
+    function showHint(msg) { var t = document.getElementById("hint"); t.textContent = msg; t.style.display = "block"; clearTimeout(window.__h); window.__h = setTimeout(function () { t.style.display = "none"; }, 8000); }
+    function isIOS() { var u = navigator.userAgent || ""; return /iPhone|iPad|iPod/.test(u) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1); }
+    document.getElementById("bookmark").addEventListener("click", function () {
+      if (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) { showHint("This menu is already saved to your home screen ✓"); return; }
+      if (deferred) { deferred.prompt(); deferred.userChoice.then(function (r) { deferred = null; if (!r || r.outcome !== "accepted") showHint("You can add it anytime from your browser menu."); }); return; }
+      if (isIOS()) { showHint("On iPhone/iPad: tap the Share button (□↑) at the bottom of Safari, then choose “Add to Home Screen.”"); return; }
+      if (/Android/.test(navigator.userAgent || "")) { showHint("Open your browser menu (⋮), then tap “Add to Home screen” or “Install app.”"); return; }
+      showHint("Press Ctrl+D (Windows) or ⌘+D (Mac) to bookmark this page.");
+    });
+  </script>
+</body>
+</html>
