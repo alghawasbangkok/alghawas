@@ -1,5 +1,5 @@
 /* Al Ghawas — minimal service worker (enables Add-to-Home-Screen / offline-lite). */
-const CACHE = "ghawas-v1";
+const CACHE = "ghawas-v2";
 self.addEventListener("install", function (e) { self.skipWaiting(); });
 self.addEventListener("activate", function (e) { self.clients.claim(); });
 self.addEventListener("fetch", function (e) {
