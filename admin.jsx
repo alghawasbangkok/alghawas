@@ -454,12 +454,13 @@ function HistoryTab({ history, onClear }) {
 function CloudCard({ flash }) {
   const [cfg, setCfg] = useState(() => store.cloudConfig());
   const [busy, setBusy] = useState(false);
+  const [errMsg, setErrMsg] = useState("");
   const save = (patch) => { const next = { ...cfg, ...patch }; setCfg(next); store.setCloudConfig(next); };
   const ready = cfg.dbUrl && cfg.apiKey && cfg.email && cfg.password;
   const publishNow = () => {
     if (!ready) { flash("Fill in all four fields first"); return; }
     setBusy(true);
-    store.push(store.load()).then(ok => { setBusy(false); flash(ok ? "Published to all customers ✓" : "Publish failed — check the details below"); });
+    store.push(store.load()).then(ok => { setBusy(false); setErrMsg(ok ? "" : (store.lastPushError || "Publish failed — check the details below")); flash(ok ? "Published to all customers ✓" : "Publish failed"); });
   };
   return (
     <div style={{ ...UI.card, padding: 16, marginBottom: 14 }}>
@@ -477,8 +478,13 @@ function CloudCard({ flash }) {
       </div>
       <div style={{ display: "flex", gap: 10, marginTop: 12, flexWrap: "wrap" }}>
         <ToolBtn onClick={publishNow} primary>{busy ? "Publishing…" : "Publish now (Delivery + Dine-in)"}</ToolBtn>
-        {(cfg.dbUrl || cfg.apiKey) && <ToolBtn onClick={() => { setCfg({}); store.setCloudConfig({}); }} danger>Turn off live publishing</ToolBtn>}
+        {(cfg.dbUrl || cfg.apiKey) && <ToolBtn onClick={() => { setCfg({}); store.setCloudConfig({}); setErrMsg(""); }} danger>Turn off live publishing</ToolBtn>}
       </div>
+      {errMsg && (
+        <div style={{ marginTop: 12, background: "var(--danger-soft)", color: "var(--danger)", borderRadius: 9, padding: "11px 13px", fontSize: 13, fontWeight: 600, lineHeight: 1.5 }}>
+          {errMsg}
+        </div>
+      )}
     </div>
   );
 }
