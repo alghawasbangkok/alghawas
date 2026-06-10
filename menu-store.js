@@ -98,16 +98,34 @@
       var c = window.GHAWAS_STORE.cloudConfig();
       if (!c.dbUrl || !c.apiKey || !c.email || !c.password) return Promise.resolve(false);
       if (!isValid(data)) return Promise.resolve(false);
+      window.GHAWAS_STORE.lastPushError = "";
       return fetch("https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=" + encodeURIComponent(c.apiKey), {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: c.email, password: c.password, returnSecureToken: true })
-      }).then(function (r) { return r.ok ? r.json() : null; })
-        .then(function (j) {
-          if (!j || !j.idToken) return false;
-          var url = c.dbUrl.replace(/\/+$/, "") + "/menu.json?auth=" + j.idToken;
+      }).then(function (r) { return r.json().catch(function () { return null; }).then(function (j) { return { ok: r.ok, body: j }; }); })
+        .then(function (res) {
+          if (!res || !res.ok || !res.body || !res.body.idToken) {
+            var code = res && res.body && res.body.error && res.body.error.message ? res.body.error.message : "LOGIN_FAILED";
+            if (code.indexOf("INVALID_LOGIN_CREDENTIALS") >= 0 || code.indexOf("INVALID_PASSWORD") >= 0 || code.indexOf("EMAIL_NOT_FOUND") >= 0) window.GHAWAS_STORE.lastPushError = "Login failed — wrong email or password. Check Authentication → Users in Firebase.";
+            else if (code.indexOf("PASSWORD_LOGIN_DISABLED") >= 0 || code.indexOf("OPERATION_NOT_ALLOWED") >= 0) window.GHAWAS_STORE.lastPushError = "Email/Password sign-in is turned off — enable it in Firebase → Authentication → Sign-in method.";
+            else if (code.indexOf("API_KEY") >= 0 || code.indexOf("API key") >= 0) window.GHAWAS_STORE.lastPushError = "The Web API Key looks wrong — recopy it from Project settings → General.";
+            else if (code.indexOf("TOO_MANY_ATTEMPTS") >= 0) window.GHAWAS_STORE.lastPushError = "Too many tries — wait a few minutes and try again.";
+            else window.GHAWAS_STORE.lastPushError = "Login failed (" + code + ").";
+            return false;
+          }
+          var url = c.dbUrl.replace(/\/+$/, "") + "/menu.json?auth=" + res.body.idToken;
           return fetch(url, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) })
-            .then(function (rr) { return rr.ok; });
-        }).catch(function () { return false; });
+            .then(function (rr) {
+              if (rr.ok) return true;
+              if (rr.status === 401 || rr.status === 403) window.GHAWAS_STORE.lastPushError = "Login worked, but the database refused the write — set Rules to { \".read\": true, \".write\": \"auth != null\" } and Publish them.";
+              else if (rr.status === 404) window.GHAWAS_STORE.lastPushError = "Database not found — check the Database URL matches the one shown in Realtime Database.";
+              else window.GHAWAS_STORE.lastPushError = "Database write failed (HTTP " + rr.status + ").";
+              return false;
+            });
+        }).catch(function () {
+          window.GHAWAS_STORE.lastPushError = "Couldn’t reach Firebase — check the Database URL (it may end in .firebasedatabase.app for your region) and your internet.";
+          return false;
+        });
     }
   };
 })();
