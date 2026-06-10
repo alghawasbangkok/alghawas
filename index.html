@@ -144,6 +144,15 @@
   <script src="menu-data.js"></script>
   <script src="menu-store.js"></script>
   <script>
+    // Live update: fetch the latest published menu and refresh once if it changed.
+    try {
+      window.GHAWAS_STORE.pull().then(function (remote) {
+        if (remote && JSON.stringify(remote) !== JSON.stringify(window.GHAWAS_STORE.load())) {
+          window.GHAWAS_STORE.save(remote);
+          location.reload();
+        }
+      });
+    } catch (e) {}
     try {
       var d = window.GHAWAS_STORE.load();
       var h = d.brand.hours;
