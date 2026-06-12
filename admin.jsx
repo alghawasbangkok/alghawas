@@ -377,6 +377,10 @@ function SettingsTab({ data, mutate, onExport, onImport, onDownload, onReset, fl
       <SectionTitle>Storefront</SectionTitle>
       <div style={{ ...UI.card, padding: 16, marginBottom: 14 }}>
         <Field label="Announcement banner (leave blank to hide)" value={b.announcement} onChange={v => mutate(d => { d.brand.announcement = v; })} placeholder="e.g. New: Lamb Ouzi! · Ramadan hours 6pm–2am" />
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 12 }}>
+          <Field label="Delivery time estimate" value={b.etaDelivery} onChange={v => mutate(d => { d.brand.etaDelivery = v; })} placeholder="e.g. 30–45 min" />
+          <Field label="Pickup time estimate" value={b.etaPickup} onChange={v => mutate(d => { d.brand.etaPickup = v; })} placeholder="e.g. 15–20 min" />
+        </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginTop: 12 }}>
           <Field label="Min order — delivery (฿)" value={b.minOrder} onChange={v => mutate(d => { d.brand.minOrder = numVal(v); })} placeholder="0" mono />
           <Field label="Delivery fee (฿)" value={b.deliveryFee} onChange={v => mutate(d => { d.brand.deliveryFee = numVal(v); })} placeholder="0" mono />

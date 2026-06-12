@@ -4,7 +4,9 @@ const DATA = window.GHAWAS_STORE.load();
 (function injectOrderCSS() {
   const css = ".order-bar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(86px + env(safe-area-inset-bottom));width:100%;max-width:444px;z-index:45;padding:0 12px;}"
     + "@media(min-width:1040px){.order-bar{bottom:24px;max-width:420px;right:24px;left:auto;transform:none;}}"
-    + ".pac-container{z-index:99999 !important;border-radius:10px;margin-top:2px;font-family:var(--sans);box-shadow:0 8px 30px rgba(0,0,0,.18);}";
+    + ".pac-container{z-index:99999 !important;border-radius:10px;margin-top:2px;font-family:var(--sans);box-shadow:0 8px 30px rgba(0,0,0,.18);}"
+    + "@keyframes ob-pop{0%{transform:scale(1)}40%{transform:scale(1.05)}100%{transform:scale(1)}}"
+    + "@media(prefers-reduced-motion: reduce){.order-bar button{animation:none !important}}";
   const s = document.createElement("style"); s.textContent = css; document.head.appendChild(s);
 })();
 // "delivery" = full ordering + contact actions; "dinein" = clean browse-only menu.
@@ -681,12 +683,35 @@ function Footer() {
 }
 
 /* ---------- empty search state ---------- */
-function NoResults({ q }) {
+function NoResults({ q, onPick }) {
+  const picks = [];
+  DATA.categories.forEach(c => c.items.forEach(it => {
+    if (it.tag === "Signature" && picks.length < 3) picks.push({ it: it, catId: c.id });
+  }));
+  if (picks.length < 3) {
+    DATA.categories.forEach(c => c.items.forEach(it => {
+      if (picks.length < 3 && it.tag && !picks.some(p => p.it === it)) picks.push({ it: it, catId: c.id });
+    }));
+  }
   return (
-    <div style={{ padding: "70px 30px", textAlign: "center" }}>
+    <div style={{ padding: "56px 30px 64px", textAlign: "center" }}>
       <Pearl size={9} />
       <p style={{ marginTop: 16, fontSize: 15, color: "var(--ink-2)" }}>No dishes match “{q}”.</p>
-      <p style={{ fontSize: 13, color: "var(--ink-3)" }}>Try “mandi”, “shrimp”, or <span className="ar">مكبوس</span>.</p>
+      <p style={{ fontSize: 13, color: "var(--ink-3)" }}>Try “mandi”, “shrimp”, or <span className="ar">مكبوس</span> — or one of our favourites:</p>
+      <div style={{ display: "flex", flexDirection: "column", gap: 9, maxWidth: 320, margin: "18px auto 0" }}>
+        {picks.map((p, i) => (
+          <button key={i} onClick={() => onPick(p.catId)} style={{
+            display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", borderRadius: 12,
+            border: "1px solid var(--line-strong)", background: "var(--paper)", textAlign: "left"
+          }}>
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <span style={{ display: "block", fontSize: 14, fontWeight: 600, color: "var(--ink)" }}>{p.it.en}</span>
+              <span className="ar" style={{ display: "block", fontSize: 12.5, color: "var(--ink-3)", marginTop: 1 }}>{p.it.ar}</span>
+            </span>
+            <span style={{ fontSize: 13.5, fontWeight: 600, color: "var(--accent)", fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>{priceLabel(p.it.price)}</span>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -733,10 +758,13 @@ const DENSITY = {
 
 /* ---------- order bar + order review sheet ---------- */
 function OrderBar({ count, total, onClick }) {
+  const popKey = useRef(0);
+  const prev = useRef(count);
+  if (count !== prev.current) { prev.current = count; popKey.current++; }
   if (!count) return null;
   return (
     <div className="order-bar">
-      <button onClick={onClick} style={{
+      <button key={popKey.current} onClick={onClick} style={{ animation: popKey.current ? "ob-pop .32s cubic-bezier(.3,1.4,.5,1)" : "none",
         width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "13px 18px",
         borderRadius: 14, background: "var(--accent)", color: "var(--on-accent)",
         boxShadow: "0 8px 24px rgba(14,95,102,.34)", border: "none"
@@ -939,7 +967,12 @@ function OrderSheet({ open, onClose, cart, onAdd, onSub, onClear }) {
           </div>
 
           <div style={{ padding: "11px 22px 0", textAlign: "center" }}>
-            <div style={{ fontSize: 12.5, color: sentHint ? "var(--accent-deep)" : "var(--ink-3)", fontWeight: sentHint ? 700 : 500, lineHeight: 1.5 }}>
+            <div style={{ fontSize: 12.5, fontWeight: 700, color: "var(--accent-deep)" }}>
+              {otype === "Delivery"
+                ? (b.etaDelivery ? "🕒 Delivery usually " + b.etaDelivery : null)
+                : (b.etaPickup ? "🕒 Usually ready for pickup in " + b.etaPickup : null)}
+            </div>
+            <div style={{ marginTop: 6, fontSize: 12.5, color: sentHint ? "var(--accent-deep)" : "var(--ink-3)", fontWeight: sentHint ? 700 : 500, lineHeight: 1.5 }}>
               {sentHint
                 ? "One more step — press Send ▸ inside WhatsApp. We’ll confirm your order shortly."
                 : "WhatsApp opens with your order written for you — press Send there, and we’ll reply to confirm."}
@@ -1140,7 +1173,7 @@ function App() {
           <StickyNav navRef={navRef} query={query} setQuery={setQuery}
             categories={visible} active={active} goTo={goTo} onBrowse={() => setCatsOpen(true)} />
           {visible.length === 0
-            ? <NoResults q={query.trim()} />
+            ? <NoResults q={query.trim()} onPick={(catId) => { setQuery(""); setTimeout(() => goTo(catId), 60); }} />
             : visible.map((c, i) => <Section key={c.id} cat={c} index={i} cart={cart} onAdd={addOne} onSub={subOne} ordering={ordering} />)}
         </div>
       </div>

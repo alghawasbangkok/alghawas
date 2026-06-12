@@ -10,6 +10,8 @@ window.GHAWAS_DEFAULT = {
     blurb: "Authentic Emirati & Khaleeji kitchen.",
     hours: { days: "Open daily", open: "8:00 AM", close: "2:00 AM", open24: "08:00", close24: "02:00" },
     announcement: "",
+    etaDelivery: "30–45 min",
+    etaPickup: "15–20 min",
     minOrder: 0,
     deliveryFee: 0,
     vatPercent: 0,
