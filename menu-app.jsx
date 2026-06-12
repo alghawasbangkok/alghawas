@@ -2,7 +2,7 @@ const { useState, useEffect, useRef, useMemo } = React;
 const DATA = window.GHAWAS_STORE.load();
 // Floating order-bar positioning (kept here so every HTML shell gets it).
 (function injectOrderCSS() {
-  const css = ".order-bar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(80px + env(safe-area-inset-bottom));width:100%;max-width:460px;z-index:45;padding:0 12px;}"
+  const css = ".order-bar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(86px + env(safe-area-inset-bottom));width:100%;max-width:444px;z-index:45;padding:0 12px;}"
     + "@media(min-width:1040px){.order-bar{bottom:24px;max-width:420px;right:24px;left:auto;transform:none;}}"
     + ".pac-container{z-index:99999 !important;border-radius:10px;margin-top:2px;font-family:var(--sans);box-shadow:0 8px 30px rgba(0,0,0,.18);}";
   const s = document.createElement("style"); s.textContent = css; document.head.appendChild(s);
@@ -49,6 +49,18 @@ function isOpenNow(hours) {
   return { open: open, opensDisp: hours.open || fmt12(hours.open24) };
 }
 function money(n) { return "฿" + Number(n || 0).toLocaleString(); }
+/* forgiving search: lowercase, strip punctuation, and also match on a
+   consonant skeleton so "makbous" finds "Makboos", "biriani" finds "Biryani" */
+function searchNorm(s) { return String(s || "").toLowerCase().replace(/[^a-z0-9\u0600-\u06ff]+/g, ""); }
+function searchSkel(s) { return searchNorm(s).replace(/[aeiouwy]/g, ""); }
+function searchMatch(hay, qRaw) {
+  const q = searchNorm(qRaw);
+  if (!q) return true;
+  const h = searchNorm(hay);
+  if (h.indexOf(q) >= 0) return true;
+  const qs = searchSkel(qRaw);
+  return qs.length >= 3 && searchSkel(hay).indexOf(qs) >= 0;
+}
 function priceLabel(p) {
   if (typeof p === "number") return "฿" + p.toLocaleString();
   return p; // e.g. "Ask"
@@ -144,7 +156,7 @@ function Hero({ openInfo }) {
 }
 
 /* ---------- sticky search + tab strip ---------- */
-function StickyNav({ navRef, query, setQuery, categories, active, goTo }) {
+function StickyNav({ navRef, query, setQuery, categories, active, goTo, onBrowse }) {
   const stripRef = useRef(null);
 
   // keep the active tab visible in the horizontal strip (no scrollIntoView)
@@ -198,6 +210,13 @@ function StickyNav({ navRef, query, setQuery, categories, active, goTo }) {
       {/* category tabs */}
       {categories.length > 0 && (
         <div ref={stripRef} className="noscroll" style={{ display: "flex", gap: 6, overflowX: "auto", padding: "2px 14px 11px", scrollBehavior: "smooth" }}>
+          <button onClick={onBrowse} aria-label="Browse all categories" style={{
+            flex: "0 0 auto", display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 13px", borderRadius: 999,
+            fontSize: 13, fontWeight: 600, color: "var(--accent-deep)", background: "var(--accent-soft)", border: "1px solid var(--accent)"
+          }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
+            All
+          </button>
           {categories.map(c => {
             const on = c.id === active;
             return (
@@ -214,6 +233,26 @@ function StickyNav({ navRef, query, setQuery, categories, active, goTo }) {
         </div>
       )}
     </div>
+  );
+}
+
+/* ---------- all-categories overview sheet ---------- */
+function CategorySheet({ open, onClose, goTo }) {
+  return (
+    <Sheet open={open} onClose={onClose} title="All categories" desc="Tap a section to jump straight to it.">
+      <div style={{ padding: "2px 12px 6px" }}>
+        {DATA.categories.map((c, i) => (
+          <button key={c.id} onClick={() => { onClose(); goTo(c.id); }} style={{
+            width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "13px 10px",
+            textAlign: "left", borderBottom: i < DATA.categories.length - 1 ? "1px solid var(--line)" : "none"
+          }}>
+            <span style={{ flex: 1, fontSize: 15, fontWeight: 600, color: "var(--ink)" }}>{c.en}</span>
+            <span className="ar" style={{ fontSize: 14, color: "var(--accent)" }}>{c.ar}</span>
+            <span style={{ fontSize: 12, color: "var(--ink-3)", minWidth: 26, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{c.items.length}</span>
+          </button>
+        ))}
+      </div>
+    </Sheet>
   );
 }
 
@@ -249,9 +288,19 @@ function Stepper({ qty, onAdd, onSub }) {
 }
 
 /* ---------- item row ---------- */
-function ItemRow({ it, qty, onAdd, onSub, ordering }) {
+function itemChoices(it) {
+  if (typeof it.choices === "string") return it.choices.split(",").map(s => s.trim()).filter(Boolean);
+  if (Array.isArray(it.choices)) return it.choices;
+  return [];
+}
+function ItemRow({ it, qtyOf, onAdd, onSub, ordering }) {
   const sig = it.tag === "Signature";
   const canOrder = ordering && typeof it.price === "number";
+  const choices = itemChoices(it);
+  const [picked, setPicked] = useState(null);
+  const choice = choices.length ? (choices.indexOf(picked) >= 0 ? picked : choices[0]) : null;
+  const qty = qtyOf ? qtyOf(choice) : 0;
+  const askWa = DATA.brand.whatsapp && DATA.brand.whatsapp[0];
   return (
     <div style={{
       display: "flex", alignItems: "flex-start", gap: 14,
@@ -274,9 +323,24 @@ function ItemRow({ it, qty, onAdd, onSub, ordering }) {
         <div className="ar" style={{ fontSize: 14, color: "var(--ink-2)", marginTop: 3, lineHeight: 1.5 }}>
           {it.ar}
         </div>
+        {canOrder && choices.length > 0 && (
+          <div style={{ display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
+            {choices.map(c => {
+              const on = c === choice;
+              return (
+                <button key={c} onClick={() => setPicked(c)} style={{
+                  padding: "5px 12px", borderRadius: 999, fontSize: 12, fontWeight: on ? 700 : 500,
+                  color: on ? "var(--on-accent)" : "var(--ink-2)",
+                  background: on ? "var(--accent)" : "transparent",
+                  border: on ? "1px solid var(--accent)" : "1px solid var(--line-strong)"
+                }}>{c}</button>
+              );
+            })}
+          </div>
+        )}
         {canOrder && (
           <div style={{ marginTop: 9 }}>
-            <Stepper qty={qty} onAdd={onAdd} onSub={onSub} />
+            <Stepper qty={qty} onAdd={() => onAdd(choice)} onSub={() => onSub(choice)} />
           </div>
         )}
       </div>
@@ -284,7 +348,11 @@ function ItemRow({ it, qty, onAdd, onSub, ordering }) {
         fontSize: 15, fontWeight: 600, color: "var(--accent)", whiteSpace: "nowrap",
         fontVariantNumeric: "tabular-nums", paddingTop: 1, minWidth: 56, textAlign: "right"
       }}>
-        {priceLabel(it.price)}
+        {typeof it.price === "string" && !IS_DINEIN && askWa ? (
+          <a href={"https://wa.me/" + askWa.num + "?text=" + encodeURIComponent("Hello " + DATA.brand.name + ", what is the price for: " + it.en + "?")} target="_blank" rel="noopener" style={{ color: "var(--accent)", textDecoration: "underline", textUnderlineOffset: 3 }}>
+            {priceLabel(it.price)}
+          </a>
+        ) : priceLabel(it.price)}
       </div>
     </div>
   );
@@ -310,9 +378,9 @@ function Section({ cat, index, cart, onAdd, onSub, ordering }) {
       </div>
       <div className="items-grid">
         {cat.items.map((it, i) => {
-          const k = itemKey(cat.id, it);
-          return <ItemRow key={i} it={it} ordering={ordering} qty={(cart[k] && cart[k].qty) || 0}
-            onAdd={() => onAdd(cat, it)} onSub={() => onSub(cat, it)} />;
+          return <ItemRow key={i} it={it} ordering={ordering}
+            qtyOf={(choice) => { const k = itemKey(cat.id, it) + (choice ? "::" + choice : ""); return (cart[k] && cart[k].qty) || 0; }}
+            onAdd={(choice) => onAdd(cat, it, choice)} onSub={(choice) => onSub(cat, it, choice)} />;
         })}
       </div>
     </section>
@@ -494,7 +562,7 @@ function ActionBar({ onCall, onWhatsapp, onLine, onDirections }) {
   const Btn = ({ children, onClick, href, primary }) => {
     const style = {
       flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
-      padding: "9px 2px", borderRadius: 13, textDecoration: "none",
+      padding: "9px 2px", borderRadius: 999, textDecoration: "none",
       background: primary ? "var(--accent)" : "var(--paper)",
       color: primary ? "var(--on-accent)" : "var(--ink)",
       border: primary ? "1px solid var(--accent)" : "1px solid var(--line-strong)",
@@ -507,10 +575,12 @@ function ActionBar({ onCall, onWhatsapp, onLine, onDirections }) {
   const ico = { width: 19, height: 19, fill: "none", strokeWidth: 1.9, strokeLinecap: "round", strokeLinejoin: "round" };
   return (
     <div className="mobile-only" style={{
-      position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)",
-      width: "100%", maxWidth: 460, zIndex: 40,
-      background: "var(--bar-bg)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
-      borderTop: "1px solid var(--line)", padding: "9px 10px calc(9px + env(safe-area-inset-bottom))",
+      position: "fixed", bottom: "calc(12px + env(safe-area-inset-bottom))", left: "50%", transform: "translateX(-50%)",
+      width: "calc(100% - 24px)", maxWidth: 432, zIndex: 40,
+      background: "var(--bar-bg)", backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)",
+      border: "1px solid var(--line)", borderRadius: 999,
+      boxShadow: "0 6px 24px rgba(27,27,24,.16), 0 2px 6px rgba(27,27,24,.08)",
+      padding: "8px 8px",
       display: "flex", gap: 7
     }}>
       <Btn primary onClick={onCall}>
@@ -632,19 +702,19 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
 const THEMES = {
   pearl: {
     "--bg": "#ffffff", "--paper": "#faf8f4", "--ink": "#1b1b18", "--ink-2": "#6f6c64",
-    "--ink-3": "#9a968c", "--line": "#ece8e0", "--line-strong": "#ddd8cc",
+    "--ink-3": "#837e6e", "--line": "#ece8e0", "--line-strong": "#ddd8cc",
     "--accent": "#0e5f66", "--accent-deep": "#0a474d", "--accent-soft": "#eef4f3",
     "--gold": "#9a7b3f", "--gutter": "#efece6", "--bar-bg": "rgba(255,255,255,.94)", "--on-accent": "#ffffff"
   },
   sand: {
     "--bg": "#f8f2e7", "--paper": "#f0e7d6", "--ink": "#2a2418", "--ink-2": "#6f6450",
-    "--ink-3": "#9c917b", "--line": "#e6dcc7", "--line-strong": "#d8cbb1",
+    "--ink-3": "#857a63", "--line": "#e6dcc7", "--line-strong": "#d8cbb1",
     "--accent": "#b0653c", "--accent-deep": "#8c4e2c", "--accent-soft": "#f3e7da",
     "--gold": "#9a7b3f", "--gutter": "#e8dec9", "--bar-bg": "rgba(248,242,231,.94)", "--on-accent": "#fff7ec"
   },
   midnight: {
     "--bg": "#16150f", "--paper": "#1f1d15", "--ink": "#f2ecdd", "--ink-2": "#b2aa96",
-    "--ink-3": "#827a68", "--line": "#2c2a20", "--line-strong": "#3b3829",
+    "--ink-3": "#9a917d", "--line": "#2c2a20", "--line-strong": "#3b3829",
     "--accent": "#cba24c", "--accent-deep": "#b0883a", "--accent-soft": "rgba(203,162,76,.14)",
     "--gold": "#cba24c", "--gutter": "#0c0b07", "--bar-bg": "rgba(22,21,15,.92)", "--on-accent": "#1a180f"
   }
@@ -693,7 +763,15 @@ function OrderSheet({ open, onClose, cart, onAdd, onSub, onClear }) {
   b.whatsapp.forEach(w => { if (branches.indexOf(w.label) < 0) branches.push(w.label); });
   const [branch, setBranch] = useState(branches[0] || "");
   const [otype, setOtype] = useState("Delivery");
-  const [form, setForm] = useState({ name: "", phone: "", address: "", building: "", floor: "", time: "", notes: "", mapLink: "" });
+  const CUST_KEY = "ghawas_customer_v1";
+  const [form, setForm] = useState(() => {
+    const base = { name: "", phone: "", address: "", building: "", floor: "", time: "", notes: "", mapLink: "" };
+    try { const s = JSON.parse(localStorage.getItem(CUST_KEY) || "null"); if (s) return { ...base, name: s.name || "", phone: s.phone || "", address: s.address || "", building: s.building || "", floor: s.floor || "" }; } catch (e) {}
+    return base;
+  });
+  const [hasSaved, setHasSaved] = useState(() => { try { return !!localStorage.getItem(CUST_KEY); } catch (e) { return false; } });
+  const [sentHint, setSentHint] = useState(false);
+  const clearSaved = () => { try { localStorage.removeItem(CUST_KEY); } catch (e) {} setHasSaved(false); setForm(f => ({ ...f, name: "", phone: "", address: "", building: "", floor: "" })); };
   const [err, setErr] = useState("");
   const setF = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const addrRef = useRef(null);
@@ -751,6 +829,8 @@ function OrderSheet({ open, onClose, cart, onAdd, onSub, onClear }) {
       add("Pickup time", form.time || "ASAP");
     }
     add("Notes", form.notes);
+    try { localStorage.setItem(CUST_KEY, JSON.stringify({ name: form.name, phone: form.phone, address: form.address, building: form.building, floor: form.floor })); setHasSaved(true); } catch (e) {}
+    setSentHint(true);
     window.open("https://wa.me/" + wa.num + "?text=" + encodeURIComponent(msg), "_blank", "noopener");
   };
 
@@ -857,6 +937,19 @@ function OrderSheet({ open, onClose, cart, onAdd, onSub, onClear }) {
               Send {otype.toLowerCase()} on WhatsApp
             </button>
           </div>
+
+          <div style={{ padding: "11px 22px 0", textAlign: "center" }}>
+            <div style={{ fontSize: 12.5, color: sentHint ? "var(--accent-deep)" : "var(--ink-3)", fontWeight: sentHint ? 700 : 500, lineHeight: 1.5 }}>
+              {sentHint
+                ? "One more step — press Send ▸ inside WhatsApp. We’ll confirm your order shortly."
+                : "WhatsApp opens with your order written for you — press Send there, and we’ll reply to confirm."}
+            </div>
+            {hasSaved && (
+              <button onClick={clearSaved} style={{ marginTop: 7, fontSize: 11.5, color: "var(--ink-3)", textDecoration: "underline", textUnderlineOffset: 2 }}>
+                Your details are saved on this device — clear them
+              </button>
+            )}
+          </div>
         </div>
       )}
     </Sheet>
@@ -952,6 +1045,7 @@ function App() {
   const [lineOpen, setLineOpen] = useState(false);
   const [locOpen, setLocOpen] = useState(false);
   const [orderOpen, setOrderOpen] = useState(false);
+  const [catsOpen, setCatsOpen] = useState(false);
   const [cart, setCart] = useState(() => loadCart());
   const navRef = useRef(null);
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
@@ -970,8 +1064,8 @@ function App() {
       return c;
     });
   }
-  const addOne = (cat, it) => { const key = cat ? itemKey(cat.id, it) : it.key; changeQty(key, { key: key, en: it.en, ar: it.ar, price: it.price }, 1); };
-  const subOne = (cat, it) => { const key = cat ? itemKey(cat.id, it) : it.key; changeQty(key, it, -1); };
+  const addOne = (cat, it, choice) => { const base = cat ? itemKey(cat.id, it) : it.key; const key = choice ? base + "::" + choice : base; changeQty(key, { key: key, en: choice ? it.en + " — " + choice : it.en, ar: it.ar, price: it.price }, 1); };
+  const subOne = (cat, it, choice) => { const base = cat ? itemKey(cat.id, it) : it.key; const key = choice ? base + "::" + choice : base; changeQty(key, it, -1); };
   const clearCart = () => { setCart({}); saveCart({}); setOrderOpen(false); };
 
   // apply tweak-derived CSS variables to the document root
@@ -988,7 +1082,7 @@ function App() {
     if (!q) return DATA.categories;
     return DATA.categories
       .map(c => ({ ...c, items: c.items.filter(it =>
-        it.en.toLowerCase().includes(q) || (it.ar && it.ar.includes(query.trim())) || c.en.toLowerCase().includes(q)
+        searchMatch(it.en, q) || (it.ar && it.ar.includes(query.trim())) || searchMatch(c.en, q)
       ) }))
       .filter(c => c.items.length > 0);
   }, [q, query]);
@@ -1044,7 +1138,7 @@ function App() {
           onLine={() => setLineOpen(true)} onDirections={() => setLocOpen(true)} />
         <div className="content">
           <StickyNav navRef={navRef} query={query} setQuery={setQuery}
-            categories={visible} active={active} goTo={goTo} />
+            categories={visible} active={active} goTo={goTo} onBrowse={() => setCatsOpen(true)} />
           {visible.length === 0
             ? <NoResults q={query.trim()} />
             : visible.map((c, i) => <Section key={c.id} cat={c} index={i} cart={cart} onAdd={addOne} onSub={subOne} ordering={ordering} />)}
@@ -1054,9 +1148,10 @@ function App() {
       <Footer />
       {!IS_DINEIN && (
         <React.Fragment>
-          <div className="mobile-only" style={{ height: 78 }} />
+          <div className="mobile-only" style={{ height: 92 }} />
           <ActionBar onCall={() => setCallOpen(true)} onWhatsapp={() => setWaOpen(true)} onLine={() => setLineOpen(true)} onDirections={() => setLocOpen(true)} />
           <CallSheet open={callOpen} onClose={() => setCallOpen(false)} />
+          <CategorySheet open={catsOpen} onClose={() => setCatsOpen(false)} goTo={(id) => { setQuery(""); setTimeout(() => goTo(id), 60); }} />
           <WhatsAppSheet open={waOpen} onClose={() => setWaOpen(false)} />
           <LineSheet open={lineOpen} onClose={() => setLineOpen(false)} />
           <LocationSheet open={locOpen} onClose={() => setLocOpen(false)} />

@@ -29,6 +29,7 @@ function summarize(prev, next) {
       if (pit.price !== it.price) lines.push('Price “' + it.en + '”: ' + money(pit.price) + " → " + money(it.price));
       if ((pit.ar || "") !== (it.ar || "")) lines.push('Arabic name updated: “' + it.en + '”');
       if ((pit.tag || "") !== (it.tag || "")) lines.push('Badge “' + it.en + '”: ' + (pit.tag || "none") + " → " + (it.tag || "none"));
+      if ((pit.choices || "") !== (it.choices || "")) lines.push('Choices updated: “' + it.en + '”');
     });
   });
   const bj = (a, b) => JSON.stringify(a) !== JSON.stringify(b);
@@ -125,6 +126,9 @@ function ItemEditor({ it, onPatch, onDelete, onMove, isFirst, isLast }) {
       <div className="grid2">
         <Field value={it.en} onChange={v => onPatch({ en: v })} placeholder="Dish name (English)" />
         <Field value={it.ar} onChange={v => onPatch({ ar: v })} placeholder="الاسم بالعربية" ar />
+      </div>
+      <div style={{ marginTop: 8 }}>
+        <Field value={it.choices} onChange={v => onPatch({ choices: v || undefined })} placeholder="Choices customers can pick (optional) — e.g. Grilled, Fried" />
       </div>
       <div style={{ display: "flex", gap: 8, marginTop: 8, alignItems: "center", flexWrap: "wrap" }}>
         <div style={{ width: 130 }}>
@@ -302,6 +306,56 @@ function ContactTab({ data, mutate }) {
 }
 
 /* ---------------- SETTINGS tab ---------------- */
+function SiteQrCard({ data, mutate, flash }) {
+  const url = (data.brand.siteUrl || "").trim();
+  const canvasRef = useRef(null);
+  const [libReady, setLibReady] = useState(() => !!window.QRCode);
+  useEffect(() => {
+    if (libReady) return;
+    const on = () => setLibReady(true);
+    window.addEventListener("qrlib-ready", on);
+    return () => window.removeEventListener("qrlib-ready", on);
+  }, [libReady]);
+  useEffect(() => {
+    if (!canvasRef.current) return;
+    if (libReady && window.QRCode && url) {
+      window.QRCode.toCanvas(canvasRef.current, url, { width: 180, margin: 1, color: { dark: "#0e5f66", light: "#ffffff" } }, function () {
+        if (canvasRef.current) { canvasRef.current.style.width = "130px"; canvasRef.current.style.height = "130px"; }
+      });
+    } else {
+      const x = canvasRef.current.getContext("2d"); x.clearRect(0, 0, 180, 180);
+    }
+  }, [url, libReady]);
+  const download = () => {
+    if (!canvasRef.current || !url) { flash("Add the site link first"); return; }
+    const a = document.createElement("a");
+    a.href = canvasRef.current.toDataURL("image/png");
+    a.download = "alghawas-menu-qr.png";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  };
+  const copy = () => {
+    if (!url) { flash("Add the site link first"); return; }
+    const done = () => flash("Link copied ✓");
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(done).catch(() => flash(url));
+    else flash(url);
+  };
+  return (
+    <div style={{ ...UI.card, padding: 16, marginBottom: 14 }}>
+      <p style={{ margin: "0 0 12px", fontSize: 13.5, color: "var(--ink-2)", lineHeight: 1.6 }}>
+        This is the link your customers open (and what the QR codes point to). If your site address ever changes, update it here and <strong>Publish</strong> — the QR below and the “QR &amp; share” on the landing page update automatically.
+      </p>
+      <Field label="Site link (your menu's web address)" value={data.brand.siteUrl} onChange={v => mutate(d => { d.brand.siteUrl = v; })} placeholder="https://…" mono />
+      <div style={{ display: "flex", gap: 16, alignItems: "center", marginTop: 14, flexWrap: "wrap" }}>
+        <canvas ref={canvasRef} width="180" height="180" style={{ width: 130, height: 130, border: "1px solid var(--line)", borderRadius: 12, padding: 8, background: "#fff" }}></canvas>
+        <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
+          <ToolBtn primary onClick={download}>Download QR (PNG)</ToolBtn>
+          <ToolBtn onClick={copy}>Copy link</ToolBtn>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function SettingsTab({ data, mutate, onExport, onImport, onDownload, onReset, flash }) {
   const b = data.brand;
   return (
@@ -371,6 +425,9 @@ function SettingsTab({ data, mutate, onExport, onImport, onDownload, onReset, fl
 
       <SectionTitle>Admin passcode</SectionTitle>
       <PasscodeCard flash={flash} />
+
+      <SectionTitle>Site link &amp; QR code</SectionTitle>
+      <SiteQrCard data={data} mutate={mutate} flash={flash} />
 
       <SectionTitle>Live publishing (optional)</SectionTitle>
       <CloudCard flash={flash} />

@@ -63,6 +63,7 @@ window.GHAWAS_DEFAULT = {
     snapchat: { handle: "alghawasbkk", url: "https://www.snapchat.com/add/alghawasbkk" },
     talabat: "Al Ghawas Kitchen & Restaurant LLC",
     web: "www.alghawasrestaurant.com",
+    siteUrl: "https://alghawasbangkok.github.io/alghawas/",
     cloudUrl: "https://alghawasbkk-default-rtdb.firebaseio.com/menu.json"
   },
   categories: [
@@ -72,8 +73,8 @@ window.GHAWAS_DEFAULT = {
       items: [
         { en: "Breakfast Meal for 4", ar: "وجبة إفطار ٤ أشخاص", price: 250, tag: "Sharing" },
         { en: "Asida", ar: "عصيدة", price: 250 },
-        { en: "Balaleet — plain / mix / egg", ar: "بلاليط — سادة / ميكس / بيض", price: 200 },
-        { en: "Loqimat — honey or date dibs", ar: "لقيمات بالعسل أو بالديبس", price: 200 },
+        { en: "Balaleet — plain / mix / egg", ar: "بلاليط — سادة / ميكس / بيض", price: 200, choices: "Plain, Mix, Egg" },
+        { en: "Loqimat — honey or date dibs", ar: "لقيمات بالعسل أو بالديبس", price: 200, choices: "Honey, Date dibs" },
         { en: "Khanfaroosh", ar: "خنفروش", price: 200 },
         { en: "Hummus & Meat", ar: "حمص لحم", price: 200 },
         { en: "Hummus & Chicken", ar: "حمص دجاج", price: 180 },
@@ -87,7 +88,7 @@ window.GHAWAS_DEFAULT = {
         { en: "Keema", ar: "كيما", price: 130 },
         { en: "Boiled Eggs with Sauce", ar: "بيض مسلوق مع الصلصة", price: 130 },
         { en: "Feta or Cream Cheese", ar: "جبن بيضاء أو سايلة", price: 130 },
-        { en: "Foul — plain or with tahini", ar: "فول سادة أو بالطحينة", price: 120 },
+        { en: "Foul — plain or with tahini", ar: "فول سادة أو بالطحينة", price: 120, choices: "Plain, Tahini" },
         { en: "Falafel Plate", ar: "صحن فالفل", price: 120 },
         { en: "Shakshouka", ar: "شكشوكة", price: 120 },
         { en: "Fried Eggs", ar: "بيض عيون", price: 120 },
@@ -102,13 +103,13 @@ window.GHAWAS_DEFAULT = {
       note: "From the tannour & saj",
       items: [
         { en: "Reqaq egg & cheese", ar: "خبز رقاق بيض مع جبن", price: 120 },
-        { en: "Reqaq with egg / cheese / zaatar / honey / mehyawah", ar: "خبز رقاق — بيض / جبن / زعتر / عسل / مهياوة", price: 100 },
-        { en: "Khamir bread — honey / cheese / dibs", ar: "خبز خمير — عسل / جبن / دبس", price: 90 },
-        { en: "Jebab — honey / cheese / dibs", ar: "جباب — عسل / جبن / دبس", price: 90 },
+        { en: "Reqaq with egg / cheese / zaatar / honey / mehyawah", ar: "خبز رقاق — بيض / جبن / زعتر / عسل / مهياوة", price: 100, choices: "Egg, Cheese, Zaatar, Honey, Mehyawah" },
+        { en: "Khamir bread — honey / cheese / dibs", ar: "خبز خمير — عسل / جبن / دبس", price: 90, choices: "Honey, Cheese, Dibs" },
+        { en: "Jebab — honey / cheese / dibs", ar: "جباب — عسل / جبن / دبس", price: 90, choices: "Honey, Cheese, Dibs" },
         { en: "Mohala Zayd", ar: "محاله زايد", price: 90 },
         { en: "Reqaq plain", ar: "خبز رقاق سادة", price: 60 },
         { en: "Brata Bread", ar: "خبز براتا", price: 50 },
-        { en: "Tannour bread — butter or zaatar", ar: "خبز تنور بالزبدة أو الزعتر", price: 50 },
+        { en: "Tannour bread — butter or zaatar", ar: "خبز تنور بالزبدة أو الزعتر", price: 50, choices: "Butter, Zaatar" },
         { en: "Tannour bread plain", ar: "خبز تنور سادة", price: 30 }
       ]
     },
@@ -190,18 +191,18 @@ window.GHAWAS_DEFAULT = {
         { en: "Safee Fish & Rice", ar: "سمك صافي مع العيش", price: 500 },
         { en: "Seafood Basket — Small", ar: "سطل مشكل بحري صغير", price: 500 },
         { en: "Grilled Salmon — 1 pc", ar: "سالمون مشوي قطعة", price: 480 },
-        { en: "Kanad — grilled or fried, 2 pcs", ar: "كنعد مشوي أو مقلي قطعتين", price: 400 },
-        { en: "Safee Fish — fried or BBQ", ar: "سمك صافي مشوي أو مقلي", price: 390 },
-        { en: "Roasted Shari — grilled or fried", ar: "شعري مشوي أو مقلي", price: 350 },
+        { en: "Kanad — grilled or fried, 2 pcs", ar: "كنعد مشوي أو مقلي قطعتين", price: 400, choices: "Grilled, Fried" },
+        { en: "Safee Fish — fried or BBQ", ar: "سمك صافي مشوي أو مقلي", price: 390, choices: "Fried, BBQ" },
+        { en: "Roasted Shari — grilled or fried", ar: "شعري مشوي أو مقلي", price: 350, choices: "Grilled, Fried" },
         { en: "Maleh Mowagar", ar: "مالح موغر", price: 350 },
         { en: "Grilled Harid", ar: "حريد مشوي", price: 350 },
         { en: "Jasheed (plain)", ar: "جشيد سادة", price: 350 },
-        { en: "Fried or BBQ Zbedi", ar: "زبيدي مقلي أو مشوي", price: 350 },
+        { en: "Fried or BBQ Zbedi", ar: "زبيدي مقلي أو مشوي", price: 350, choices: "Fried, BBQ" },
         { en: "Naghar Grill", ar: "نغر مشوي", price: 300 },
         { en: "Maleh — plain", ar: "مالح سادة", price: 300 },
-        { en: "Mamosh Zebedi — fried or grilled", ar: "مموش زبيدي مقلي أو مشوي", price: 250 },
+        { en: "Mamosh Zebedi — fried or grilled", ar: "مموش زبيدي مقلي أو مشوي", price: 250, choices: "Fried, Grilled" },
         { en: "Grilled Squid", ar: "حبار مشوي", price: 250 },
-        { en: "Kanad — grilled or fried, 1 pc", ar: "كنعد مشوي أو مقلي قطعة", price: 220 }
+        { en: "Kanad — grilled or fried, 1 pc", ar: "كنعد مشوي أو مقلي قطعة", price: 220, choices: "Grilled, Fried" }
       ]
     },
     {

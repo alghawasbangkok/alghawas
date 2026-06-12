@@ -53,6 +53,12 @@
   <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
   <script src="menu-data.js"></script>
   <script src="menu-store.js"></script>
+  <script>
+    // QR generator (ESM build) — exposes window.QRCode.toCanvas when ready.
+    import("https://cdn.jsdelivr.net/npm/qrcode@1.5.4/+esm")
+      .then(function (m) { window.QRCode = m.default && m.default.toCanvas ? m.default : m; window.dispatchEvent(new Event("qrlib-ready")); })
+      .catch(function () {});
+  </script>
   <script type="text/babel" src="admin.jsx"></script>
 </body>
 </html>
