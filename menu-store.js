@@ -1,8 +1,8 @@
 /* Al Ghawas — shared menu store.
-   The menu page and the admin page both read/write the live menu here.
-   Storage is the browser's localStorage, so on a given device/host, saving in
-   the admin instantly updates what the menu shows. To publish changes to ALL
-   customers, use the admin's "Download data file" and replace menu-data.js. */
+   The menu pages and the admin both read/write the live menu here.
+   - On a device, edits saved in the admin update that device instantly (localStorage).
+   - To publish to ALL customers, set up Live publishing in the admin (Firebase):
+     pull() reads the published menu, push() signs in and writes it. */
 (function () {
   var KEY = "ghawas_menu_v1";
   var HKEY = "ghawas_history_v1";

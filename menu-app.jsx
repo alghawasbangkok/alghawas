@@ -6,7 +6,12 @@ const DATA = window.GHAWAS_STORE.load();
     + "@media(min-width:1040px){.order-bar{bottom:24px;max-width:420px;right:24px;left:auto;transform:none;}}"
     + ".pac-container{z-index:99999 !important;border-radius:10px;margin-top:2px;font-family:var(--sans);box-shadow:0 8px 30px rgba(0,0,0,.18);}"
     + "@keyframes ob-pop{0%{transform:scale(1)}40%{transform:scale(1.05)}100%{transform:scale(1)}}"
-    + "@media(prefers-reduced-motion: reduce){.order-bar button{animation:none !important}}";
+    + "button,[role=button]{transition:transform .14s cubic-bezier(.23,1,.32,1);}"
+    + "button:active,[role=button]:active{transform:scale(.97);}"
+    + ":focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px;}"
+    + "button:focus:not(:focus-visible),[role=button]:focus:not(:focus-visible){outline:none;}"
+    + ".order-bar button:active{transform:scale(.985);}"
+    + "@media(prefers-reduced-motion: reduce){.order-bar button{animation:none !important}button:active,[role=button]:active{transform:none !important}}";
   const s = document.createElement("style"); s.textContent = css; document.head.appendChild(s);
 })();
 // "delivery" = full ordering + contact actions; "dinein" = clean browse-only menu.
@@ -34,6 +39,7 @@ window.GHAWAS_STORE.onChange(function () { location.reload(); });
     window.GHAWAS_STORE.pull().then(function (remote) {
       if (remote && JSON.stringify(remote) !== JSON.stringify(window.GHAWAS_STORE.load())) {
         window.GHAWAS_STORE.save(remote);
+        try { if (sessionStorage.getItem("ghawas_synced")) return; sessionStorage.setItem("ghawas_synced", "1"); } catch (e) {}
         location.reload();
       }
     });
@@ -191,6 +197,7 @@ function StickyNav({ navRef, query, setQuery, categories, active, goTo, onBrowse
             value={query}
             onChange={e => setQuery(e.target.value)}
             placeholder="Search dishes…"
+            type="search" aria-label="Search dishes"
             style={{
               width: "100%", border: "1px solid var(--line-strong)", background: "var(--paper)",
               borderRadius: 999, padding: "9px 32px 9px 32px", fontSize: 13.5, color: "var(--ink)",
@@ -224,7 +231,7 @@ function StickyNav({ navRef, query, setQuery, categories, active, goTo, onBrowse
             return (
               <button key={c.id} data-tab={c.id} onClick={() => goTo(c.id)} style={{
                 flex: "0 0 auto", padding: "7px 14px", borderRadius: 999, fontSize: 12.5,
-                letterSpacing: ".02em", whiteSpace: "nowrap", transition: "all .18s",
+                letterSpacing: ".02em", whiteSpace: "nowrap", transition: "background-color .18s ease, color .18s ease, border-color .18s ease, transform .14s cubic-bezier(.23,1,.32,1)",
                 fontWeight: on ? 600 : 500,
                 color: on ? "var(--on-accent)" : "var(--ink-2)",
                 background: on ? "var(--accent)" : "transparent",
@@ -391,16 +398,32 @@ function Section({ cat, index, cart, onAdd, onSub, ordering }) {
 
 /* ---------- bottom sheet shell ---------- */
 function Sheet({ open, onClose, title, desc, children }) {
+  const panelRef = useRef(null);
+  const lastFocus = useRef(null);
+  useEffect(() => {
+    if (open) {
+      lastFocus.current = document.activeElement;
+      const id = setTimeout(() => { if (panelRef.current) panelRef.current.focus(); }, 60);
+      const onKey = (e) => { if (e.key === "Escape") onClose(); };
+      document.addEventListener("keydown", onKey);
+      return () => { clearTimeout(id); document.removeEventListener("keydown", onKey); };
+    } else if (lastFocus.current && lastFocus.current.focus) {
+      lastFocus.current.focus(); lastFocus.current = null;
+    }
+  }, [open]);
   return (
-    <div onClick={onClose} style={{
-      position: "fixed", inset: 0, zIndex: 60, display: open ? "flex" : "none",
+    <div onClick={onClose} aria-hidden={!open} style={{
+      position: "fixed", inset: 0, zIndex: 60, display: "flex",
       alignItems: "flex-end", justifyContent: "center",
-      background: "rgba(20,20,18,.42)", opacity: open ? 1 : 0, transition: "opacity .2s"
+      background: "rgba(20,20,18,.42)",
+      opacity: open ? 1 : 0, visibility: open ? "visible" : "hidden", pointerEvents: open ? "auto" : "none",
+      transition: open ? "opacity .28s ease-out" : "opacity .22s ease-out, visibility 0s linear .22s"
     }}>
-      <div onClick={e => e.stopPropagation()} style={{
-        width: "100%", maxWidth: 460, background: "var(--bg)", borderRadius: "20px 20px 0 0",
+      <div ref={panelRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label={title} onClick={e => e.stopPropagation()} style={{
+        width: "100%", maxWidth: 460, background: "var(--bg)", borderRadius: "20px 20px 0 0", outline: "none",
         padding: "10px 0 calc(20px + env(safe-area-inset-bottom))", maxHeight: "82vh", overflowY: "auto",
-        transform: open ? "translateY(0)" : "translateY(100%)", transition: "transform .26s cubic-bezier(.3,.8,.3,1)"
+        transform: open ? "translateY(0)" : "translateY(100%)",
+        transition: open ? "transform .42s cubic-bezier(0.32,0.72,0,1)" : "transform .24s cubic-bezier(0.32,0.72,0,1)"
       }}>
         <div style={{ width: 40, height: 4, borderRadius: 2, background: "var(--line-strong)", margin: "0 auto 8px" }} />
         <div style={{ padding: "10px 22px 0", fontSize: 12, letterSpacing: ".08em", textTransform: "uppercase", color: "var(--accent)", fontWeight: 700 }}>
@@ -410,7 +433,7 @@ function Sheet({ open, onClose, title, desc, children }) {
           <div style={{ padding: "5px 22px 8px", fontSize: 13, color: "var(--ink-2)", lineHeight: 1.5 }}>{desc}</div>
         )}
         <div style={{ padding: "4px 0 0" }}>{children}</div>
-        <button onClick={onClose} style={{
+        <button onClick={onClose} aria-label="Close" style={{
           margin: "16px 22px 0", width: "calc(100% - 44px)", padding: "13px",
           borderRadius: 12, background: "var(--paper)", border: "1px solid var(--line)",
           fontSize: 14, fontWeight: 600, color: "var(--ink-2)"
@@ -863,7 +886,7 @@ function OrderSheet({ open, onClose, cart, onAdd, onSub, onClear }) {
   };
 
   const fieldStyle = { width: "100%", border: "1px solid var(--line-strong)", borderRadius: 10, padding: "10px 12px", fontSize: 13.5, fontFamily: "var(--sans)", color: "var(--ink)", outline: "none", background: "var(--paper)" };
-  const Lbl = ({ children }) => <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".04em", textTransform: "uppercase", color: "var(--ink-3)", margin: "0 0 5px" }}>{children}</div>;
+  const Lbl = ({ children, htmlFor }) => { const st = { display: "block", fontSize: 11, fontWeight: 700, letterSpacing: ".04em", textTransform: "uppercase", color: "var(--ink-3)", margin: "0 0 5px" }; return htmlFor ? <label htmlFor={htmlFor} style={st}>{children}</label> : <div style={st}>{children}</div>; };
 
   return (
     <Sheet open={open} onClose={onClose} title="Your order" desc="Review, add your details, then send on WhatsApp — we’ll confirm.">
@@ -904,9 +927,9 @@ function OrderSheet({ open, onClose, cart, onAdd, onSub, onClear }) {
 
           <div style={{ padding: "10px 22px 0" }}>
             <Lbl>Order type</Lbl>
-            <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+            <div role="radiogroup" aria-label="Order type" style={{ display: "flex", gap: 8, marginBottom: 16 }}>
               {["Delivery", "Pickup"].map(ot => (
-                <button key={ot} onClick={() => setOtype(ot)} style={{
+                <button key={ot} role="radio" aria-checked={ot === otype} onClick={() => setOtype(ot)} style={{
                   flex: 1, padding: "11px", borderRadius: 10, fontSize: 14, fontWeight: 700,
                   border: "1px solid " + (ot === otype ? "var(--accent)" : "var(--line-strong)"),
                   background: ot === otype ? "var(--accent)" : "transparent",
@@ -918,9 +941,9 @@ function OrderSheet({ open, onClose, cart, onAdd, onSub, onClear }) {
             {branches.length > 1 && (
               <div style={{ marginBottom: 14 }}>
                 <Lbl>{otype === "Pickup" ? "Pick up at" : "Order from"}</Lbl>
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <div role="radiogroup" aria-label={otype === "Pickup" ? "Pick up at" : "Order from"} style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   {branches.map(br => (
-                    <button key={br} onClick={() => setBranch(br)} style={{
+                    <button key={br} role="radio" aria-checked={br === branch} onClick={() => setBranch(br)} style={{
                       padding: "8px 14px", borderRadius: 999, fontSize: 13, fontWeight: 600,
                       border: "1px solid " + (br === branch ? "var(--accent)" : "var(--line-strong)"),
                       background: br === branch ? "var(--accent)" : "transparent",
@@ -932,28 +955,28 @@ function OrderSheet({ open, onClose, cart, onAdd, onSub, onClear }) {
             )}
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
-              <div><Lbl>Name</Lbl><input value={form.name} onChange={e => setF("name", e.target.value)} placeholder="Your name" style={fieldStyle} /></div>
-              <div><Lbl>Phone</Lbl><input value={form.phone} onChange={e => setF("phone", e.target.value)} placeholder="08x-xxx-xxxx" style={fieldStyle} inputMode="tel" /></div>
+              <div><Lbl htmlFor="of-name">Name</Lbl><input id="of-name" autoComplete="name" value={form.name} onChange={e => setF("name", e.target.value)} placeholder="Your name" style={fieldStyle} /></div>
+              <div><Lbl htmlFor="of-phone">Phone</Lbl><input id="of-phone" type="tel" autoComplete="tel" value={form.phone} onChange={e => setF("phone", e.target.value)} placeholder="08x-xxx-xxxx" style={fieldStyle} inputMode="tel" /></div>
             </div>
 
             {otype === "Delivery" ? (
               <React.Fragment>
                 <div style={{ marginBottom: 10 }}>
-                  <Lbl>{MAPS_KEY ? "Address — search on Google Maps" : "Address / area"}</Lbl>
-                  <input ref={addrRef} value={form.address} onChange={e => { setF("address", e.target.value); }} placeholder={MAPS_KEY ? "Start typing, then pick your address…" : "Street, soi, district"} style={fieldStyle} />
+                  <Lbl htmlFor="of-addr">{MAPS_KEY ? "Address — search on Google Maps" : "Address / area"}</Lbl>
+                  <input id="of-addr" autoComplete="street-address" ref={addrRef} value={form.address} onChange={e => { setF("address", e.target.value); }} placeholder={MAPS_KEY ? "Start typing, then pick your address…" : "Street, soi, district"} style={fieldStyle} />
                   {MAPS_KEY && <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 5 }}>Choose from the Google suggestions to attach an exact map pin.</div>}
                   {form.mapLink && <div style={{ fontSize: 12, color: "var(--accent)", marginTop: 6, fontWeight: 600 }}>📍 Map pin attached</div>}
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
-                  <div><Lbl>Building / condo</Lbl><input value={form.building} onChange={e => setF("building", e.target.value)} placeholder="Name / no." style={fieldStyle} /></div>
-                  <div><Lbl>Floor / unit / room</Lbl><input value={form.floor} onChange={e => setF("floor", e.target.value)} placeholder="e.g. 12A / 1203" style={fieldStyle} /></div>
+                  <div><Lbl htmlFor="of-bldg">Building / condo</Lbl><input id="of-bldg" autoComplete="address-line2" value={form.building} onChange={e => setF("building", e.target.value)} placeholder="Name / no." style={fieldStyle} /></div>
+                  <div><Lbl htmlFor="of-floor">Floor / unit / room</Lbl><input id="of-floor" value={form.floor} onChange={e => setF("floor", e.target.value)} placeholder="e.g. 12A / 1203" style={fieldStyle} /></div>
                 </div>
               </React.Fragment>
             ) : (
-              <div style={{ marginBottom: 10 }}><Lbl>Pickup time</Lbl><input value={form.time} onChange={e => setF("time", e.target.value)} placeholder="e.g. in 30 min / 8:30 PM" style={fieldStyle} /></div>
+              <div style={{ marginBottom: 10 }}><Lbl htmlFor="of-time">Pickup time</Lbl><input id="of-time" value={form.time} onChange={e => setF("time", e.target.value)} placeholder="e.g. in 30 min / 8:30 PM" style={fieldStyle} /></div>
             )}
 
-            <div><Lbl>Notes (optional)</Lbl><textarea value={form.notes} onChange={e => setF("notes", e.target.value)} rows={2} placeholder="Landmark, no onions, cutlery…" style={{ ...fieldStyle, resize: "vertical" }} /></div>
+            <div><Lbl htmlFor="of-notes">Notes (optional)</Lbl><textarea id="of-notes" value={form.notes} onChange={e => setF("notes", e.target.value)} rows={2} placeholder="Landmark, no onions, cutlery…" style={{ ...fieldStyle, resize: "vertical" }} /></div>
 
             {err && <div style={{ color: "var(--danger, #b3402f)", fontSize: 12.5, marginTop: 9, fontWeight: 600 }}>{err}</div>}
           </div>
@@ -1020,6 +1043,7 @@ function Sidebar({ query, setQuery, categories, active, goTo, showActions, onCal
         </svg>
         <input
           value={query} onChange={e => setQuery(e.target.value)} placeholder="Search dishes…"
+          type="search" aria-label="Search dishes"
           style={{
             width: "100%", border: "1px solid var(--line-strong)", background: "var(--paper)",
             borderRadius: 999, padding: "10px 14px 10px 34px", fontSize: 13.5, color: "var(--ink)",

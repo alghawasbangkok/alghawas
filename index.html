@@ -30,7 +30,7 @@
   .ar { font-family: var(--ar-serif); direction: rtl; unicode-bidi: isolate; }
   a { text-decoration: none; color: inherit; }
   .card {
-    width: 100%; max-width: 440px; background: var(--bg); border-radius: 26px;
+    width: 100%; max-width: 460px; background: var(--bg); border-radius: 26px;
     box-shadow: 0 1px 2px rgba(27,27,24,.04), 0 30px 80px rgba(27,27,24,.16);
     padding: 30px 30px 24px; text-align: center;
   }
@@ -47,7 +47,7 @@
   .btns { display: flex; flex-direction: column; gap: 10px; }
   .opt {
     display: flex; align-items: center; gap: 16px; padding: 14px 18px; border-radius: 16px;
-    border: 1px solid var(--line-strong); background: var(--paper); transition: transform .12s ease, box-shadow .15s ease, border-color .15s ease;
+    border: 1px solid var(--line-strong); background: var(--paper); transition: transform .14s cubic-bezier(.23,1,.32,1), box-shadow .15s ease, border-color .15s ease;
   }
   .opt:active { transform: scale(.98); }
   .opt.primary { background: var(--accent); border-color: var(--accent); }
@@ -61,19 +61,21 @@
   .opt .arrow { flex: 0 0 auto; color: var(--ink-3); }
   .opt.primary .arrow { color: rgba(255,255,255,.85); }
   .foot { margin-top: 16px; font-size: 11px; color: var(--ink-3); letter-spacing: .03em; line-height: 1.5; }
-  .bookmark { width: 100%; margin-top: 10px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 11px; border-radius: 13px; border: 1px dashed var(--line-strong); background: var(--bg); color: var(--ink-2); font-size: 13px; font-weight: 600; font-family: var(--sans); cursor: pointer; }
+  .bookmark { width: 100%; margin-top: 10px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 11px; border-radius: 13px; border: 1px dashed var(--line-strong); background: var(--bg); color: var(--ink-2); font-size: 13px; font-weight: 600; font-family: var(--sans); cursor: pointer; transition: transform .14s cubic-bezier(.23,1,.32,1), border-color .15s ease; }
   .dir-label { font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: var(--ink-3); font-weight: 700; margin: 18px 0 10px; }
   .dir-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .dir-btn {
     display: flex; align-items: center; justify-content: center; gap: 9px; padding: 12px 10px;
     border-radius: 14px; border: 1px solid var(--line-strong); background: var(--paper);
-    font-size: 13px; font-weight: 600; color: var(--ink); transition: transform .12s ease, border-color .15s ease;
+    font-size: 13px; font-weight: 600; color: var(--ink); transition: transform .14s cubic-bezier(.23,1,.32,1), border-color .15s ease;
   }
   .dir-btn:active { transform: scale(.97); }
   .dir-btn .where { display: block; text-align: left; white-space: nowrap; }
   .dir-btn.active { border-color: var(--accent); background: var(--accent-soft); }
-  .dir-panel { display: none; margin-top: 12px; text-align: left; border: 1px solid var(--line-strong); background: var(--bg); border-radius: 14px; padding: 16px; }
-  .dir-panel.open { display: block; }
+  .dir-panel { display: none; margin-top: 0; text-align: left; border: 1px solid var(--line-strong); background: var(--bg); border-radius: 14px; }
+  .dir-panel.open { display: block; margin-top: 12px; animation: dir-in .28s cubic-bezier(.23,1,.32,1); }
+  @keyframes dir-in { from { transform: translateY(-7px); } to { transform: none; } }
+  .dir-inner { padding: 16px; }
   .dir-panel .b-name { font-size: 14px; font-weight: 700; color: var(--ink); margin-bottom: 4px; }
   .dir-panel .b-addr { font-size: 13px; color: var(--ink-2); line-height: 1.6; margin-bottom: 12px; }
   .dir-panel .b-go { display: inline-flex; align-items: center; gap: 8px; padding: 11px 18px; border-radius: 11px; background: var(--accent); color: #fff; font-size: 13.5px; font-weight: 700; white-space: nowrap; }
@@ -81,20 +83,32 @@
   .bookmark:active { transform: scale(.98); }
   .util-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
   .util-row .bookmark { margin-top: 0; width: auto; padding: 11px 8px; }
-  /* QR share overlay */
-  #qr-overlay { display: none; position: fixed; inset: 0; z-index: 80; background: rgba(20,20,18,.45); align-items: center; justify-content: center; padding: 24px; }
-  #qr-overlay.open { display: flex; }
-  .qr-box { width: 100%; max-width: 340px; background: var(--bg); border-radius: 22px; padding: 26px 24px 22px; text-align: center; box-shadow: 0 30px 80px rgba(27,27,24,.3); }
+  /* QR share overlay (centered modal — scales from center) */
+  #qr-overlay { display: flex; position: fixed; inset: 0; z-index: 80; background: rgba(20,20,18,.45); align-items: center; justify-content: center; padding: 24px; opacity: 0; visibility: hidden; pointer-events: none; transition: opacity .22s ease-out, visibility 0s linear .22s; }
+  #qr-overlay.open { opacity: 1; visibility: visible; pointer-events: auto; transition: opacity .24s ease-out; }
+  .qr-box { width: 100%; max-width: 340px; background: var(--bg); border-radius: 22px; padding: 26px 24px 22px; text-align: center; box-shadow: 0 30px 80px rgba(27,27,24,.3); transform: scale(.95); transition: transform .28s cubic-bezier(.23,1,.32,1); }
+  #qr-overlay.open .qr-box { transform: scale(1); }
   .qr-box .q-title { font-family: var(--serif); font-size: 21px; color: var(--ink); }
   .qr-box .q-sub { font-size: 12.5px; color: var(--ink-2); margin: 6px 0 16px; line-height: 1.5; }
   .qr-box img { width: 210px; height: 210px; display: block; margin: 0 auto; border: 1px solid var(--line); border-radius: 14px; padding: 10px; image-rendering: pixelated; }
   .qr-box .q-url { font-size: 11px; color: var(--ink-3); letter-spacing: .02em; margin-top: 12px; word-break: break-all; }
   .qr-actions { display: flex; gap: 9px; margin-top: 16px; }
-  .qr-actions button { flex: 1; padding: 12px 8px; border-radius: 11px; font-family: var(--sans); font-size: 13px; font-weight: 700; cursor: pointer; border: 1px solid var(--line-strong); background: var(--paper); color: var(--ink); }
+  .qr-actions button { flex: 1; padding: 12px 8px; border-radius: 11px; font-family: var(--sans); font-size: 13px; font-weight: 700; cursor: pointer; border: 1px solid var(--line-strong); background: var(--paper); color: var(--ink); transition: transform .14s cubic-bezier(.23,1,.32,1); }
   .qr-actions button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
   .qr-actions button:active { transform: scale(.97); }
   #hint { display: none; margin-top: 12px; font-size: 12.5px; color: var(--accent-deep); background: var(--accent-soft); border-radius: 10px; padding: 11px 14px; line-height: 1.5; }
-  @media (max-width: 480px) { body { background: var(--bg); padding: 0; } .card { box-shadow: none; max-width: 100%; min-height: 100vh; min-height: 100svh; border-radius: 0; display: flex; flex-direction: column; justify-content: center; } }
+  @media (hover: hover) and (pointer: fine) {
+    .opt:hover { border-color: var(--accent); }
+    .opt.primary:hover { box-shadow: 0 8px 24px rgba(14,95,102,.28); border-color: var(--accent); }
+    .dir-btn:hover, .bookmark:hover, .qr-actions button:hover { border-color: var(--accent); }
+  }
+  @media (max-width: 480px) { body { background: var(--bg); padding: 0; display: block; } .card { box-shadow: none; max-width: 100%; min-height: 100svh; border-radius: 0; } }
+  @media (prefers-reduced-motion: reduce) {
+    .opt, .dir-btn, .bookmark, .qr-actions button { transition: border-color .15s ease; }
+    .opt:active, .dir-btn:active, .bookmark:active, .qr-actions button:active { transform: none; }
+    .qr-box { transition: none; transform: none; }
+    .dir-panel.open { animation: none; }
+  }
   @media (max-height: 700px) and (max-width: 480px) {
     .logo-ar { font-size: 24px; margin-bottom: 8px; }
     h1 { font-size: 34px; }
@@ -138,20 +152,24 @@
       </button>
     </div>
     <div class="dir-panel" id="dir-p1">
+      <div class="dir-inner">
       <div class="b-name">Al Ghawas — Main Branch (Sukhumvit Soi 3/1)</div>
       <div class="b-addr">79/2-5, Sukhumvit Rd, Khlong Toei Nuea, Watthana, Bangkok 10110, Thailand</div>
       <a class="b-go" href="https://maps.app.goo.gl/sey4oH3JtqX5rhRH6" target="_blank" rel="noopener">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6.5-5.5-6.5-10a6.5 6.5 0 0 1 13 0c0 4.5-6.5 10-6.5 10z"></path><circle cx="12" cy="11" r="2.3"></circle></svg>
         Open Maps
       </a>
+      </div>
     </div>
     <div class="dir-panel" id="dir-p2">
+      <div class="dir-inner">
       <div class="b-name">Al Ghawas — Sukhumvit 5 (Nana)</div>
       <div class="b-addr">Grand 5, Sukhumvit 5 Alley, Khlong Toei Nuea, Khlong Toei, Bangkok 10110, Thailand</div>
       <a class="b-go" href="https://maps.app.goo.gl/SUPSQERsqDK7tHvL9" target="_blank" rel="noopener">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6.5-5.5-6.5-10a6.5 6.5 0 0 1 13 0c0 4.5-6.5 10-6.5 10z"></path><circle cx="12" cy="11" r="2.3"></circle></svg>
         Open Maps
       </a>
+      </div>
     </div>
 
     <div class="util-row">
@@ -204,47 +222,48 @@
   </script>
   <script>
     // Live update: fetch the latest published menu and refresh once if it changed.
+    function applyData(d) {
+      try {
+        var h = d.brand.hours;
+        if (h) {
+          document.getElementById("hours").textContent = (h.open || "") + " – " + (h.close || "");
+          function pHM(s){ if(!s) return null; var m=String(s).split(":"); return (parseInt(m[0],10)||0)*60+(parseInt(m[1],10)||0); }
+          if (h.open24 && h.close24) {
+            var o=pHM(h.open24), c=pHM(h.close24), now=new Date(), mins=now.getHours()*60+now.getMinutes();
+            var isOpen = (c>o) ? (mins>=o && mins<c) : (mins>=o || mins<c);
+            var dot=document.getElementById("ln-dot");
+            if(dot) dot.style.background = isOpen ? "#1f8a5b" : "#c0432f";
+            document.getElementById("hours").textContent = (isOpen ? "Open now" : "Closed") + " · " + (h.open||"") + " – " + (h.close||"");
+          }
+        }
+        var bn=document.getElementById("ln-banner");
+        if (d.brand.announcement) { bn.textContent=d.brand.announcement; bn.style.display="block"; } else { bn.style.display="none"; }
+        var H = d.brand.home || {};
+        function setT(id, val) { if (val) { var e = document.getElementById(id); if (e) e.textContent = val; } }
+        if (d.brand.ar) document.getElementById("ln-logo").textContent = d.brand.ar;
+        if (d.brand.name) document.getElementById("ln-name").textContent = d.brand.name;
+        setT("ln-artag", d.brand.arTagline);
+        setT("ln-tagline", H.tagline);
+        setT("ln-prompt", H.prompt);
+        setT("ln-del-t", H.deliveryTitle);
+        setT("ln-del-s", H.deliverySub);
+        setT("ln-dine-t", H.dineTitle);
+        setT("ln-dine-s", H.dineSub);
+        setT("foot", H.foot);
+        // Social buttons — same source as the menu pages (admin → Contact), no hardcoding.
+        var igEl = document.getElementById("soc-ig"), snEl = document.getElementById("soc-snap"), rowEl = document.getElementById("social-row");
+        var igOn = false, snOn = false;
+        if (d.brand.instagram && igEl) { igEl.href = "https://instagram.com/" + String(d.brand.instagram).replace(/^@/, ""); igEl.style.display = ""; igOn = true; }
+        if (d.brand.snapchat && d.brand.snapchat.url && snEl) { snEl.href = d.brand.snapchat.url; snEl.style.display = ""; snOn = true; }
+        if (rowEl && (igOn || snOn)) { rowEl.style.display = ""; if (igOn !== snOn) rowEl.style.gridTemplateColumns = "1fr"; }
+      } catch (e) {}
+    }
+    applyData(window.GHAWAS_STORE.load());
+    // Live update: fetch the latest published menu and refresh the text in place (no reload flicker).
     try {
       window.GHAWAS_STORE.pull().then(function (remote) {
-        if (remote && JSON.stringify(remote) !== JSON.stringify(window.GHAWAS_STORE.load())) {
-          window.GHAWAS_STORE.save(remote);
-          location.reload();
-        }
+        if (remote) { window.GHAWAS_STORE.save(remote); applyData(remote); }
       });
-    } catch (e) {}
-    try {
-      var d = window.GHAWAS_STORE.load();
-      var h = d.brand.hours;
-      if (h) {
-        document.getElementById("hours").textContent = (h.open || "") + " – " + (h.close || "");
-        function pHM(s){ if(!s) return null; var m=String(s).split(":"); return (parseInt(m[0],10)||0)*60+(parseInt(m[1],10)||0); }
-        if (h.open24 && h.close24) {
-          var o=pHM(h.open24), c=pHM(h.close24), now=new Date(), mins=now.getHours()*60+now.getMinutes();
-          var isOpen = (c>o) ? (mins>=o && mins<c) : (mins>=o || mins<c);
-          var dot=document.getElementById("ln-dot");
-          if(dot) dot.style.background = isOpen ? "#1f8a5b" : "#c0432f";
-          document.getElementById("hours").textContent = (isOpen ? "Open now" : "Closed") + " · " + (h.open||"") + " – " + (h.close||"");
-        }
-      }
-      if (d.brand.announcement) { var bn=document.getElementById("ln-banner"); bn.textContent=d.brand.announcement; bn.style.display="block"; }
-      var H = d.brand.home || {};
-      function setT(id, val) { if (val) { var e = document.getElementById(id); if (e) e.textContent = val; } }
-      if (d.brand.ar) document.getElementById("ln-logo").textContent = d.brand.ar;
-      if (d.brand.name) document.getElementById("ln-name").textContent = d.brand.name;
-      setT("ln-artag", d.brand.arTagline);
-      setT("ln-tagline", H.tagline);
-      setT("ln-prompt", H.prompt);
-      setT("ln-del-t", H.deliveryTitle);
-      setT("ln-del-s", H.deliverySub);
-      setT("ln-dine-t", H.dineTitle);
-      setT("ln-dine-s", H.dineSub);
-      setT("foot", H.foot);
-      // Social buttons — same source as the menu pages (admin → Contact), no hardcoding.
-      var igEl = document.getElementById("soc-ig"), snEl = document.getElementById("soc-snap"), rowEl = document.getElementById("social-row");
-      var igOn = false, snOn = false;
-      if (d.brand.instagram && igEl) { igEl.href = "https://instagram.com/" + String(d.brand.instagram).replace(/^@/, ""); igEl.style.display = ""; igOn = true; }
-      if (d.brand.snapchat && d.brand.snapchat.url && snEl) { snEl.href = d.brand.snapchat.url; snEl.style.display = ""; snOn = true; }
-      if (rowEl && (igOn || snOn)) { rowEl.style.display = ""; if (igOn !== snOn) rowEl.style.gridTemplateColumns = "1fr"; }
     } catch (e) {}
 
     var deferred = null;

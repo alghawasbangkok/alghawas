@@ -197,8 +197,130 @@ function CategoryEditor({ cat, ci, total, mutate }) {
 
 /* ---------------- MENU tab ---------------- */
 function MenuTab({ data, mutate }) {
+  const [msg, setMsg] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [fmt, setFmt] = useState("xlsx");
+  const fileRef = useRef(null);
+  function ensureXLSX() {
+    if (window.XLSX) return Promise.resolve(window.XLSX);
+    return new Promise(function (res, rej) {
+      var s = document.createElement("script");
+      s.src = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
+      s.onload = function () { res(window.XLSX); };
+      s.onerror = rej;
+      document.head.appendChild(s);
+    });
+  }
+  function flash(m) { setMsg(m); clearTimeout(window.__xlmsg); window.__xlmsg = setTimeout(function () { setMsg(""); }, 7000); }
+  function buildSheet(XLSX) {
+    const aoa = [["Category (English)", "Category (Arabic)", "Dish (English)", "Dish (Arabic)", "Price (THB)", "Tag", "Choices"]];
+    data.categories.forEach(function (c) {
+      if (!c.items.length) { aoa.push([c.en || "", c.ar || "", "", "", "", "", ""]); return; }
+      c.items.forEach(function (it) {
+        aoa.push([c.en || "", c.ar || "", it.en || "", it.ar || "", (typeof it.price === "number" ? it.price : (it.price || "")), it.tag || "", (it.choices || []).join(" | ")]);
+      });
+    });
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws["!cols"] = [{ wch: 24 }, { wch: 18 }, { wch: 32 }, { wch: 26 }, { wch: 11 }, { wch: 12 }, { wch: 30 }];
+    return ws;
+  }
+  async function exportExcel() {
+    try {
+      setBusy(true);
+      const XLSX = await ensureXLSX();
+      const ws = buildSheet(XLSX);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Menu");
+      XLSX.writeFile(wb, "al-ghawas-menu.xlsx");
+      flash("Excel downloaded ✓  Edit it, then upload it back here.");
+    } catch (e) { flash("Couldn’t create the file — check your internet and try again."); }
+    finally { setBusy(false); }
+  }
+  async function exportCSV() {
+    try {
+      setBusy(true);
+      const XLSX = await ensureXLSX();
+      const ws = buildSheet(XLSX);
+      const csv = "\uFEFF" + XLSX.utils.sheet_to_csv(ws);   // BOM keeps Arabic readable
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob); a.download = "al-ghawas-menu.csv";
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+      flash("CSV downloaded ✓  In Google Sheets: File → Import → Upload. Edit, then File → Download → CSV and upload it back here.");
+    } catch (e) { flash("Couldn’t create the CSV — check your internet and try again."); }
+    finally { setBusy(false); }
+  }
+  async function importExcel(file) {
+    try {
+      setBusy(true);
+      const XLSX = await ensureXLSX();
+      var wb;
+      if (/\.csv$/i.test(file.name || "")) { const text = await file.text(); wb = XLSX.read(text, { type: "string" }); }
+      else { const buf = new Uint8Array(await file.arrayBuffer()); wb = XLSX.read(buf, { type: "array" }); }
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
+      if (!rows.length) { flash("That file looks empty."); return; }
+      const head = (rows[0] || []).map(function (h) { return String(h).toLowerCase(); });
+      const find = function (kw, anti) { for (var i = 0; i < head.length; i++) { var h = head[i]; if (kw.every(function (k) { return h.indexOf(k) >= 0; }) && (!anti || !anti.some(function (a) { return h.indexOf(a) >= 0; }))) return i; } return -1; };
+      var cEn = find(["category"], ["arabic"]); var cAr = find(["category", "arabic"]);
+      var dEn = find(["dish"], ["arabic"]); if (dEn < 0) dEn = find(["item"], ["arabic"]);
+      var dAr = find(["dish", "arabic"]); if (dAr < 0) dAr = find(["item", "arabic"]);
+      var pIdx = find(["price"]); var tIdx = find(["tag"]); var chIdx = find(["choice"]);
+      if (cEn < 0) cEn = 0; if (cAr < 0) cAr = 1; if (dEn < 0) dEn = 2; if (dAr < 0) dAr = 3; if (pIdx < 0) pIdx = 4; if (tIdx < 0) tIdx = 5; if (chIdx < 0) chIdx = 6;
+      const prev = {}; data.categories.forEach(function (c) { prev[(c.en || "").trim().toLowerCase()] = c; });
+      const order = []; const map = {};
+      const cell = function (row, i) { return String(row[i] == null ? "" : row[i]).trim(); };
+      for (var r = 1; r < rows.length; r++) {
+        var row = rows[r]; if (!row) continue;
+        var catEn = cell(row, cEn), catAr = cell(row, cAr), dishEn = cell(row, dEn), dishAr = cell(row, dAr);
+        var rawP = row[pIdx], tag = cell(row, tIdx), choicesRaw = cell(row, chIdx);
+        if (!catEn && !dishEn) continue;
+        var key = catEn.toLowerCase();
+        if (!map[key]) {
+          var ex = prev[key];
+          map[key] = { id: ex ? ex.id : ("cat" + (order.length + 1) + "-" + Date.now()), en: catEn, ar: catAr || (ex ? ex.ar : "") || "", items: [] };
+          if (ex && ex.note) map[key].note = ex.note;
+          order.push(key);
+        } else if (catAr && !map[key].ar) { map[key].ar = catAr; }
+        if (!dishEn && (rawP == null || String(rawP).trim() === "")) continue;
+        var price;
+        if (typeof rawP === "number") price = rawP;
+        else { var s = String(rawP == null ? "" : rawP).replace(/[฿,\s]/g, "").trim(); price = s === "" ? 0 : (/^\d+(\.\d+)?$/.test(s) ? Number(s) : String(rawP).trim()); }
+        var item = { en: dishEn, ar: dishAr, price: price };
+        if (tag) item.tag = tag;
+        if (choicesRaw) { var ch = choicesRaw.split(/[|,]/).map(function (x) { return x.trim(); }).filter(Boolean); if (ch.length) item.choices = ch; }
+        map[key].items.push(item);
+      }
+      const cats = order.map(function (k) { return map[k]; });
+      if (!cats.length) { flash("Couldn’t find any rows — keep the first row as the column headings."); return; }
+      const totalItems = cats.reduce(function (n, c) { return n + c.items.length; }, 0);
+      if (!confirm("Replace the whole menu with this file?\n\n" + cats.length + " sections · " + totalItems + " dishes\n\nReview it after, then Publish to update both menus.")) return;
+      mutate(function (d) { d.categories = cats; });
+      flash("Menu updated ✓  Review below, then Publish.");
+    } catch (e) { flash("Couldn’t read that file — please upload the .xlsx or .csv you downloaded from here."); }
+    finally { setBusy(false); if (fileRef.current) fileRef.current.value = ""; }
+  }
   return (
     <div>
+      <div style={{ ...UI.card, padding: 16, marginBottom: 16 }}>
+        <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6 }}>Edit the menu in a spreadsheet</div>
+        <p style={{ margin: "0 0 12px", fontSize: 13.5, color: "var(--ink-2)", lineHeight: 1.6 }}>
+          Download, edit prices or dishes, and upload it back. Works with Excel and Google Sheets.
+        </p>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+          <select value={fmt} onChange={function (e) { setFmt(e.target.value); }} style={{ appearance: "auto", padding: "10px 14px", borderRadius: 9, fontSize: 13.5, fontWeight: 600, border: "1px solid var(--line-strong)", background: "#fff", color: "var(--ink)", fontFamily: "inherit", height: "auto" }} aria-label="File format">
+            <option value="xlsx">Excel (.xlsx)</option>
+            <option value="csv">Google Sheets (.csv)</option>
+          </select>
+          <ToolBtn primary onClick={function () { fmt === "csv" ? exportCSV() : exportExcel(); }} style={{ minWidth: 120 }}>{busy ? "Working…" : "⬇ Download"}</ToolBtn>
+          <ToolBtn onClick={function () { if (fileRef.current) fileRef.current.click(); }} style={{ minWidth: 120 }}>⬆ Upload</ToolBtn>
+          <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" style={{ display: "none" }}
+            onChange={function (e) { var f = e.target.files && e.target.files[0]; if (f) importExcel(f); }} />
+        </div>
+        <p style={{ margin: "10px 0 0", fontSize: 12, color: "var(--ink-3)", lineHeight: 1.5 }}>Tip: keep the heading row. Price can be a number or “Ask”.</p>
+        {msg && <div style={{ marginTop: 11, fontSize: 13, fontWeight: 600, color: "var(--accent-deep)", background: "var(--accent-soft)", borderRadius: 9, padding: "10px 12px", lineHeight: 1.5 }}>{msg}</div>}
+      </div>
       <Hint>Each card is a menu section. Edit names &amp; prices, drag order with ↑ ↓, and add or remove dishes and whole sections. There’s no limit.</Hint>
       {data.categories.map((cat, ci) => (
         <CategoryEditor key={ci} cat={cat} ci={ci} total={data.categories.length} mutate={mutate} />
@@ -459,13 +581,14 @@ function Hint({ children }) {
 function SectionTitle({ children }) {
   return <h2 style={{ fontSize: 13, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", color: "var(--ink-3)", margin: "26px 2px 12px" }}>{children}</h2>;
 }
-function ToolBtn({ onClick, children, primary, danger }) {
+function ToolBtn({ onClick, children, primary, danger, style }) {
   return (
     <button onClick={onClick} style={{
       padding: "10px 16px", borderRadius: 9, fontWeight: 600, fontSize: 13.5,
       border: "1px solid " + (primary ? "var(--accent)" : danger ? "var(--danger)" : "var(--line-strong)"),
       background: primary ? "var(--accent)" : danger ? "var(--danger-soft)" : "#fff",
-      color: primary ? "#fff" : danger ? "var(--danger)" : "var(--ink)"
+      color: primary ? "#fff" : danger ? "var(--danger)" : "var(--ink)",
+      ...(style || {})
     }}>{children}</button>
   );
 }
@@ -649,6 +772,7 @@ function Admin() {
   const [status, setStatus] = useState("saved");   // saving | saved | publishing | published
   const [history, setHistory] = useState(() => store.history());
   const fileRef = useRef(null);
+  const lastToast = useRef("");
   const timer = useRef(null);
   const lastLogged = useRef(deepClone(store.load()));
   const first = useRef(true);
@@ -767,11 +891,17 @@ function Admin() {
 
       <input ref={fileRef} type="file" accept="application/json,.json" onChange={onFile} style={{ display: "none" }} />
 
-      {toast && (
-        <div style={{ position: "fixed", bottom: 22, left: "50%", transform: "translateX(-50%)", zIndex: 50, background: "var(--ink)", color: "#fff", padding: "12px 20px", borderRadius: 10, fontSize: 14, fontWeight: 600, boxShadow: "0 8px 30px rgba(0,0,0,.25)" }}>
-          {toast}
-        </div>
-      )}
+      {(function(){ if (toast) lastToast.current = toast; return null; })()}
+      <div aria-live="polite" style={{
+        position: "fixed", bottom: 22, left: "50%", zIndex: 50,
+        background: "var(--ink)", color: "#fff", padding: "12px 20px", borderRadius: 10, fontSize: 14, fontWeight: 600,
+        boxShadow: "0 8px 30px rgba(0,0,0,.25)", maxWidth: "calc(100% - 32px)", textAlign: "center", pointerEvents: "none",
+        opacity: toast ? 1 : 0,
+        transform: toast ? "translateX(-50%) translateY(0)" : "translateX(-50%) translateY(10px)",
+        transition: "opacity .22s ease-out, transform .3s cubic-bezier(.23,1,.32,1)"
+      }}>
+        {lastToast.current}
+      </div>
     </div>
   );
 }
