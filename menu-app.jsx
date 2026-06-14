@@ -1318,12 +1318,12 @@ function App() {
 
       <Footer />
       <BackToTop />
+      <CategorySheet open={catsOpen} onClose={() => setCatsOpen(false)} goTo={(id) => { setQuery(""); setTimeout(() => goTo(id), 60); }} />
       {!IS_DINEIN && (
         <React.Fragment>
           <div className="mobile-only" style={{ height: 92 }} />
           <ActionBar onCall={() => setCallOpen(true)} onWhatsapp={() => setWaOpen(true)} onLine={() => setLineOpen(true)} onDirections={() => setLocOpen(true)} />
           <CallSheet open={callOpen} onClose={() => setCallOpen(false)} />
-          <CategorySheet open={catsOpen} onClose={() => setCatsOpen(false)} goTo={(id) => { setQuery(""); setTimeout(() => goTo(id), 60); }} />
           <WhatsAppSheet open={waOpen} onClose={() => setWaOpen(false)} />
           <LineSheet open={lineOpen} onClose={() => setLineOpen(false)} />
           <LocationSheet open={locOpen} onClose={() => setLocOpen(false)} />
