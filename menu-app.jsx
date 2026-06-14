@@ -963,9 +963,9 @@ function OrderSheet({ open, onClose, cart, onAdd, onSub, onClear }) {
     const url = "https://wa.me/" + wa.num + "?text=" + encodeURIComponent(msg);
     setSent(true); haptic(18);
     setTimeout(function () {
-      window.open(url, "_blank", "noopener");
-      setSent(false);
       if (onClear) onClear();
+      setSent(false);
+      window.location.href = url;   // same tab — no leftover WhatsApp page to close
     }, 900);
   };
 
