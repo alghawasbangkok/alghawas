@@ -14,9 +14,25 @@ const DATA = window.GHAWAS_STORE.load();
     + ".order-bar button:active{transform:scale(.985);}"
     + ".cat-nav-btn{transition:background-color .15s ease, color .15s ease, box-shadow .15s ease;}"
     + "@media(hover:hover) and (pointer:fine){.cat-nav-btn:not([data-on=true]):hover{background:var(--accent-soft);color:var(--accent-deep);}}"
-    + "@media(prefers-reduced-motion: reduce){.order-bar button{animation:none !important}button:active,[role=button]:active{transform:none !important}}";
+    + "@keyframes pearl-shimmer{0%{background-position:-120% 0}60%,100%{background-position:220% 0}}"
+    + ".sig-tag{background:linear-gradient(100deg, rgba(154,123,63,.14) 0%, rgba(154,123,63,.14) 35%, rgba(212,180,110,.55) 50%, rgba(154,123,63,.14) 65%, rgba(154,123,63,.14) 100%);background-size:220% 100%;animation:pearl-shimmer 4.5s ease-in-out infinite;}"
+    + "@keyframes breathe{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.45);opacity:.55}}"
+    + ".live-dot{position:relative;}"
+    + ".live-dot::after{content:'';position:absolute;inset:0;border-radius:50%;background:inherit;animation:breathe 2.4s ease-in-out infinite;}"
+    + "@keyframes ok-pop{0%{transform:scale(.6);opacity:0}55%{transform:scale(1.06);opacity:1}100%{transform:scale(1);opacity:1}}"
+    + "@keyframes ok-draw{to{stroke-dashoffset:0}}"
+    + "@keyframes b2t-in{from{transform:scale(.5);opacity:0}to{transform:none;opacity:1}}"
+    + "@keyframes line-in{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:none}}"
+    + "@media(prefers-reduced-motion: reduce){.order-bar button{animation:none !important}button:active,[role=button]:active{transform:none !important}.sig-tag{animation:none}.live-dot::after{animation:none;display:none}}";
   const s = document.createElement("style"); s.textContent = css; document.head.appendChild(s);
 })();
+/* subtle haptic on key taps (mobile; no-op where unsupported / reduced-motion) */
+function haptic(ms) {
+  try {
+    if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (navigator.vibrate) navigator.vibrate(ms || 8);
+  } catch (e) {}
+}
 // "delivery" = full ordering + contact actions; "dinein" = clean browse-only menu.
 const MODE = (window.GHAWAS_MODE === "dinein") ? "dinein" : "delivery";
 const IS_DINEIN = MODE === "dinein";
@@ -60,6 +76,21 @@ function isOpenNow(hours) {
   return { open: open, opensDisp: hours.open || fmt12(hours.open24) };
 }
 function money(n) { return "฿" + Number(n || 0).toLocaleString(); }
+/* animated count-up money (rAF with a safety snap so it never stalls) */
+function CountUpMoney({ value }) {
+  const [disp, setDisp] = React.useState(value);
+  const prev = useRef(value);
+  useEffect(() => {
+    const from = prev.current, to = value; prev.current = value;
+    if (from === to) { setDisp(to); return; }
+    const t0 = performance.now(), dur = 420; let raf = 0, done = false;
+    const tick = (now) => { const p = Math.min(1, (now - t0) / dur); const e = 1 - Math.pow(1 - p, 3); setDisp(Math.round(from + (to - from) * e)); if (p < 1) raf = requestAnimationFrame(tick); else done = true; };
+    raf = requestAnimationFrame(tick);
+    const safety = setTimeout(() => { if (!done) setDisp(to); }, 520);
+    return () => { cancelAnimationFrame(raf); clearTimeout(safety); };
+  }, [value]);
+  return money(disp);
+}
 /* forgiving search: lowercase, strip punctuation, and also match on a
    consonant skeleton so "makbous" finds "Makboos", "biriani" finds "Biryani" */
 function searchNorm(s) { return String(s || "").toLowerCase().replace(/[^a-z0-9\u0600-\u06ff]+/g, ""); }
@@ -154,7 +185,7 @@ function Hero({ openInfo }) {
       </div>
 
       <div style={{ display: "inline-flex", alignItems: "center", gap: 8, marginTop: 18, padding: "7px 16px", borderRadius: 999, background: "var(--accent-soft)" }}>
-        <span style={{ width: 7, height: 7, borderRadius: "50%", background: openInfo.open ? "#1f8a5b" : "#c0432f", boxShadow: "0 0 0 3px " + (openInfo.open ? "rgba(31,138,91,.2)" : "rgba(192,67,47,.18)") }} />
+        <span className={openInfo.open ? "live-dot" : undefined} style={{ width: 7, height: 7, borderRadius: "50%", background: openInfo.open ? "#1f8a5b" : "#c0432f", boxShadow: "0 0 0 3px " + (openInfo.open ? "rgba(31,138,91,.2)" : "rgba(192,67,47,.18)") }} />
         <span style={{ fontSize: 12.5, fontWeight: 600, color: "var(--accent-deep)", letterSpacing: ".01em" }}>
           {openInfo.open ? "Open now" : "Closed"} · {b.hours.open} – {b.hours.close}
         </span>
@@ -166,6 +197,14 @@ function Hero({ openInfo }) {
 /* ---------- sticky search + tab strip ---------- */
 function StickyNav({ navRef, query, setQuery, categories, active, goTo, onBrowse }) {
   const stripRef = useRef(null);
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const f = () => setScrolled((window.scrollY || window.pageYOffset || 0) > 320);
+    window.addEventListener("scroll", f, { passive: true }); f();
+    return () => window.removeEventListener("scroll", f);
+  }, []);
+  const activeCat = DATA.categories.find(c => c.id === active);
+  const showCat = scrolled && !!activeCat;
 
   // keep the active tab visible in the horizontal strip (no scrollIntoView)
   useEffect(() => {
@@ -185,8 +224,14 @@ function StickyNav({ navRef, query, setQuery, categories, active, goTo, onBrowse
     }}>
       {/* brand line + search */}
       <div style={{ padding: "11px 16px 9px", display: "flex", alignItems: "center", gap: 10 }}>
-        <span style={{ fontFamily: "var(--serif)", fontSize: 15, letterSpacing: ".12em", color: "var(--ink)", whiteSpace: "nowrap" }}>
-          {DATA.brand.name}
+        <span style={{ position: "relative", display: "block", height: 19, width: 118, flex: "0 0 auto", overflow: "hidden" }}>
+          <span style={{ position: "absolute", left: 0, top: 0, fontFamily: "var(--serif)", fontSize: 15, letterSpacing: ".12em", color: "var(--ink)", whiteSpace: "nowrap", opacity: showCat ? 0 : 1, transition: "opacity .25s ease" }}>
+            {DATA.brand.name}
+          </span>
+          <span aria-hidden={!showCat} style={{ position: "absolute", left: 0, top: 0, display: "flex", alignItems: "baseline", gap: 6, whiteSpace: "nowrap", maxWidth: "100%", overflow: "hidden", opacity: showCat ? 1 : 0, transform: showCat ? "translateY(0)" : "translateY(4px)", transition: "opacity .25s ease, transform .25s ease" }}>
+            <span style={{ fontFamily: "var(--serif)", fontSize: 15, color: "var(--ink)", textOverflow: "ellipsis", overflow: "hidden" }}>{activeCat ? activeCat.en : ""}</span>
+            <span className="ar" style={{ fontSize: 11.5, color: "var(--accent)" }}>{activeCat ? activeCat.ar : ""}</span>
+          </span>
         </span>
         <div style={{ position: "relative", flex: 1 }}>
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}>
@@ -273,11 +318,37 @@ function itemKey(catId, it) { return catId + "|" + it.en; }
 function cartCount(c) { return Object.values(c).reduce((n, x) => n + x.qty, 0); }
 function cartTotal(c) { return Object.values(c).reduce((n, x) => n + (typeof x.price === "number" ? x.price * x.qty : 0), 0); }
 
+/* ---------- “fly to order” flourish (WAAPI: compositor-driven, decorative, reduced-motion aware) ---------- */
+function flyToCart(srcEl) {
+  try {
+    if (!srcEl) return;
+    if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const r = srcEl.getBoundingClientRect();
+    const sx = r.left + r.width / 2, sy = r.top + r.height / 2;
+    const bar = document.querySelector(".order-bar");
+    let ex, ey;
+    if (bar) { const b = bar.getBoundingClientRect(); ex = b.left + b.width / 2; ey = b.top + b.height / 2; }
+    else { ex = window.innerWidth / 2; ey = window.innerHeight - 92; }
+    const dot = document.createElement("div");
+    dot.style.cssText = "position:fixed;left:0;top:0;width:13px;height:13px;border-radius:50%;background:var(--accent);z-index:55;pointer-events:none;box-shadow:0 2px 10px rgba(14,95,102,.55);will-change:transform,opacity;";
+    document.body.appendChild(dot);
+    const peakY = Math.min(sy, ey) - 46;   // arc up before dropping into the bar
+    const a = dot.animate([
+      { transform: "translate(" + (sx - 7) + "px," + (sy - 7) + "px) scale(1)", opacity: 1, offset: 0 },
+      { transform: "translate(" + ((sx + ex) / 2 - 7) + "px," + (peakY - 7) + "px) scale(1.15)", opacity: 1, offset: 0.4 },
+      { transform: "translate(" + (ex - 7) + "px," + (ey - 7) + "px) scale(.35)", opacity: .35, offset: 1 }
+    ], { duration: 560, easing: "cubic-bezier(.5,0,.35,1)", fill: "forwards" });
+    a.onfinish = function () { dot.remove(); };
+    setTimeout(function () { try { dot.remove(); } catch (e) {} }, 950);
+  } catch (e) {}
+}
+
 /* ---------- qty stepper ---------- */
 function Stepper({ qty, onAdd, onSub }) {
+  const add = (e) => { haptic(8); flyToCart(e.currentTarget); onAdd(); };
   if (!qty) {
     return (
-      <button onClick={onAdd} aria-label="Add to order" style={{
+      <button onClick={add} aria-label="Add to order" style={{
         display: "inline-flex", alignItems: "center", gap: 5, padding: "6px 12px", borderRadius: 999,
         border: "1px solid var(--accent)", background: "var(--accent-soft)", color: "var(--accent-deep)",
         fontSize: 12.5, fontWeight: 600
@@ -291,7 +362,7 @@ function Stepper({ qty, onAdd, onSub }) {
     <div style={{ display: "inline-flex", alignItems: "center", gap: 9 }}>
       <button onClick={onSub} aria-label="Remove one" style={btn}>−</button>
       <span style={{ minWidth: 14, textAlign: "center", fontSize: 15, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{qty}</span>
-      <button onClick={onAdd} aria-label="Add one" style={{ ...btn, background: "var(--accent)", color: "var(--on-accent)", borderColor: "var(--accent)" }}>+</button>
+      <button onClick={add} aria-label="Add one" style={{ ...btn, background: "var(--accent)", color: "var(--on-accent)", borderColor: "var(--accent)" }}>+</button>
     </div>
   );
 }
@@ -321,7 +392,7 @@ function ItemRow({ it, qtyOf, onAdd, onSub, ordering }) {
             {it.en}
           </span>
           {it.tag && (
-            <span style={{
+            <span className={sig ? "sig-tag" : undefined} style={{
               fontSize: 9.5, letterSpacing: ".1em", textTransform: "uppercase", fontWeight: 700,
               padding: "2px 7px", borderRadius: 4,
               color: sig ? "var(--gold)" : "var(--accent)",
@@ -800,7 +871,7 @@ function OrderBar({ count, total, onClick }) {
       }}>
         <span style={{ width: 26, height: 26, borderRadius: "50%", background: "rgba(255,255,255,.22)", display: "grid", placeItems: "center", fontSize: 13, fontWeight: 700 }}>{count}</span>
         <span style={{ fontSize: 15, fontWeight: 700, letterSpacing: ".01em" }}>View order</span>
-        <span style={{ marginLeft: "auto", fontSize: 15, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>฿{total.toLocaleString()}</span>
+        <span style={{ marginLeft: "auto", fontSize: 15, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}><CountUpMoney value={total} /></span>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--on-accent)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6" /></svg>
       </button>
     </div>
@@ -828,6 +899,7 @@ function OrderSheet({ open, onClose, cart, onAdd, onSub, onClear }) {
   });
   const [hasSaved, setHasSaved] = useState(() => { try { return !!localStorage.getItem(CUST_KEY); } catch (e) { return false; } });
   const [sentHint, setSentHint] = useState(false);
+  const [sent, setSent] = useState(false);
   const clearSaved = () => { try { localStorage.removeItem(CUST_KEY); } catch (e) {} setHasSaved(false); setForm(f => ({ ...f, name: "", phone: "", address: "", building: "", floor: "" })); };
   const [err, setErr] = useState("");
   const setF = (k, v) => setForm(f => ({ ...f, [k]: v }));
@@ -888,7 +960,13 @@ function OrderSheet({ open, onClose, cart, onAdd, onSub, onClear }) {
     add("Notes", form.notes);
     try { localStorage.setItem(CUST_KEY, JSON.stringify({ name: form.name, phone: form.phone, address: form.address, building: form.building, floor: form.floor })); setHasSaved(true); } catch (e) {}
     setSentHint(true);
-    window.open("https://wa.me/" + wa.num + "?text=" + encodeURIComponent(msg), "_blank", "noopener");
+    const url = "https://wa.me/" + wa.num + "?text=" + encodeURIComponent(msg);
+    setSent(true); haptic(18);
+    setTimeout(function () {
+      window.open(url, "_blank", "noopener");
+      setSent(false);
+      if (onClear) onClear();
+    }, 900);
   };
 
   const fieldStyle = { width: "100%", border: "1px solid var(--line-strong)", borderRadius: 10, padding: "10px 12px", fontSize: 13.5, fontFamily: "var(--sans)", color: "var(--ink)", outline: "none", background: "var(--paper)" };
@@ -896,12 +974,21 @@ function OrderSheet({ open, onClose, cart, onAdd, onSub, onClear }) {
 
   return (
     <Sheet open={open} onClose={onClose} title="Your order" desc="Review, add your details, then send on WhatsApp — we’ll confirm.">
-      {lines.length === 0 ? (
+      {sent && (
+        <div style={{ position: "absolute", inset: 0, zIndex: 5, background: "var(--bg)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, borderRadius: "20px 20px 0 0" }}>
+          <svg width="76" height="76" viewBox="0 0 52 52" style={{ animation: "ok-pop .4s cubic-bezier(.23,1,.32,1)" }}>
+            <circle cx="26" cy="26" r="24" fill="none" stroke="var(--accent)" strokeWidth="3" opacity="0.25" />
+            <path d="M15 27l8 8 15-16" fill="none" stroke="var(--accent)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" style={{ strokeDasharray: 44, strokeDashoffset: 44, animation: "ok-draw .45s .12s ease-out forwards" }} />
+          </svg>
+          <div style={{ fontFamily: "var(--serif)", fontSize: 22, color: "var(--ink)" }}>Order sent</div>
+          <div style={{ fontSize: 13, color: "var(--ink-3)" }}>Opening WhatsApp to confirm…</div>
+        </div>
+      )}      {lines.length === 0 ? (
         <div style={{ padding: "26px 22px", textAlign: "center", color: "var(--ink-3)", fontSize: 14 }}>Your order is empty.</div>
       ) : (
         <div>
           {lines.map((l, i) => (
-            <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 22px", borderTop: "1px solid var(--line)" }}>
+            <div key={l.key || i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 22px", borderTop: "1px solid var(--line)", animation: "line-in .25s ease-out" }}>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 14.5, fontWeight: 600, color: "var(--ink)" }}>{l.en}</div>
                 <div className="ar" style={{ fontSize: 12.5, color: "var(--ink-3)", marginTop: 1 }}>{l.ar}</div>
@@ -919,7 +1006,7 @@ function OrderSheet({ open, onClose, cart, onAdd, onSub, onClear }) {
             {isDelivery && fee > 0 && <OrderRow label="Delivery fee" val={money(fee)} />}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8, paddingTop: 8, borderTop: "1px dashed var(--line-strong)" }}>
               <span style={{ fontSize: 15, fontWeight: 700 }}>Total</span>
-              <span style={{ fontSize: 18, fontWeight: 700, color: "var(--accent)", fontVariantNumeric: "tabular-nums" }}>{money(total)}</span>
+              <span style={{ fontSize: 18, fontWeight: 700, color: "var(--accent)", fontVariantNumeric: "tabular-nums" }}><CountUpMoney value={total} /></span>
             </div>
             {isDelivery && minOrder > 0 && subtotal < minOrder && (
               <div style={{ fontSize: 12, color: "#c0432f", marginTop: 8, fontWeight: 600 }}>Minimum order for delivery is {money(minOrder)} (add {money(minOrder - subtotal)} more).</div>
@@ -1101,6 +1188,26 @@ function Sidebar({ query, setQuery, categories, active, goTo, showActions, onCal
 }
 
 /* ---------- root ---------- */
+function BackToTop() {
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    const f = () => setShow((window.scrollY || window.pageYOffset || 0) > 700);
+    window.addEventListener("scroll", f, { passive: true }); f();
+    return () => window.removeEventListener("scroll", f);
+  }, []);
+  if (!show) return null;
+  return (
+    <button onClick={() => { haptic(6); animateScroll(0); }} aria-label="Back to top" style={{
+      position: "fixed", right: 16, bottom: "calc(150px + env(safe-area-inset-bottom))", zIndex: 44,
+      width: 44, height: 44, borderRadius: "50%", border: "1px solid var(--line-strong)",
+      background: "radial-gradient(circle at 35% 30%, #ffffff, #eef2f1 70%, #dfe6e4)",
+      boxShadow: "0 6px 20px rgba(27,27,24,.2)", display: "grid", placeItems: "center",
+      animation: "b2t-in .26s cubic-bezier(.23,1,.32,1)"
+    }}>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5M6 11l6-6 6 6" /></svg>
+    </button>
+  );
+}
 function App() {
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(DATA.categories[0].id);
@@ -1210,6 +1317,7 @@ function App() {
       </div>
 
       <Footer />
+      <BackToTop />
       {!IS_DINEIN && (
         <React.Fragment>
           <div className="mobile-only" style={{ height: 92 }} />
