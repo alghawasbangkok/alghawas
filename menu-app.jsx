@@ -6,11 +6,14 @@ const DATA = window.GHAWAS_STORE.load();
     + "@media(min-width:1040px){.order-bar{bottom:24px;max-width:420px;right:24px;left:auto;transform:none;}}"
     + ".pac-container{z-index:99999 !important;border-radius:10px;margin-top:2px;font-family:var(--sans);box-shadow:0 8px 30px rgba(0,0,0,.18);}"
     + "@keyframes ob-pop{0%{transform:scale(1)}40%{transform:scale(1.05)}100%{transform:scale(1)}}"
+    + "@keyframes ob-in{from{transform:translateY(16px)}to{transform:none}}"
     + "button,[role=button]{transition:transform .14s cubic-bezier(.23,1,.32,1);}"
     + "button:active,[role=button]:active{transform:scale(.97);}"
     + ":focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px;}"
     + "button:focus:not(:focus-visible),[role=button]:focus:not(:focus-visible){outline:none;}"
     + ".order-bar button:active{transform:scale(.985);}"
+    + ".cat-nav-btn{transition:background-color .15s ease, color .15s ease, box-shadow .15s ease;}"
+    + "@media(hover:hover) and (pointer:fine){.cat-nav-btn:not([data-on=true]):hover{background:var(--accent-soft);color:var(--accent-deep);}}"
     + "@media(prefers-reduced-motion: reduce){.order-bar button{animation:none !important}button:active,[role=button]:active{transform:none !important}}";
   const s = document.createElement("style"); s.textContent = css; document.head.appendChild(s);
 })();
@@ -74,20 +77,17 @@ function priceLabel(p) {
   return p; // e.g. "Ask"
 }
 /* rAF smooth-scroll fallback (some renderers ignore behavior:'smooth') */
-function animateScroll(targetY, dur = 420) {
-  const startY = window.scrollY || window.pageYOffset;
-  const max = document.documentElement.scrollHeight - window.innerHeight;
-  const endY = Math.max(0, Math.min(targetY, max));
-  const dist = endY - startY;
-  if (Math.abs(dist) < 2) return;
-  const t0 = performance.now();
-  const ease = t => 1 - Math.pow(1 - t, 3);
-  function step(now) {
-    const p = Math.min(1, (now - t0) / dur);
-    window.scrollTo(0, startY + dist * ease(p));
-    if (p < 1) requestAnimationFrame(step);
-  }
-  requestAnimationFrame(step);
+function animateScroll(targetY) {
+  const se = document.scrollingElement || document.documentElement;
+  const docH = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight, se.scrollHeight);
+  const endY = Math.max(0, Math.min(targetY, Math.max(0, docH - window.innerHeight)));
+  // Native smooth scroll is the primary path — works without rAF ticking.
+  try { window.scrollTo({ top: endY, behavior: "smooth" }); }
+  catch (e) { window.scrollTo(0, endY); }
+  // Safety: if smooth scroll didn't take us there (renderers that ignore it / throttle rAF), snap.
+  setTimeout(function () {
+    if (Math.abs((window.scrollY || window.pageYOffset || 0) - endY) > 6) window.scrollTo(0, endY);
+  }, 600);
 }
 function animateScrollEl(el, targetX, dur = 320) {
   const startX = el.scrollLeft;
@@ -582,21 +582,22 @@ function LocationSheet({ open, onClose }) {
 }
 
 /* ---------- sticky bottom actions ---------- */
+function ActBtn({ children, onClick, href, primary }) {
+  const style = {
+    flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
+    padding: "9px 2px", borderRadius: 999, textDecoration: "none",
+    background: primary ? "var(--accent)" : "var(--paper)",
+    color: primary ? "var(--on-accent)" : "var(--ink)",
+    border: primary ? "1px solid var(--accent)" : "1px solid var(--line-strong)",
+    fontSize: 11, fontWeight: 600, letterSpacing: ".01em"
+  };
+  return href
+    ? <a href={href} target="_blank" rel="noopener" style={style}>{children}</a>
+    : <button onClick={onClick} style={style}>{children}</button>;
+}
 function ActionBar({ onCall, onWhatsapp, onLine, onDirections }) {
   const b = DATA.brand;
-  const Btn = ({ children, onClick, href, primary }) => {
-    const style = {
-      flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
-      padding: "9px 2px", borderRadius: 999, textDecoration: "none",
-      background: primary ? "var(--accent)" : "var(--paper)",
-      color: primary ? "var(--on-accent)" : "var(--ink)",
-      border: primary ? "1px solid var(--accent)" : "1px solid var(--line-strong)",
-      fontSize: 11, fontWeight: 600, letterSpacing: ".01em"
-    };
-    return href
-      ? <a href={href} target="_blank" rel="noopener" style={style}>{children}</a>
-      : <button onClick={onClick} style={style}>{children}</button>;
-  };
+  const Btn = ActBtn;
   const ico = { width: 19, height: 19, fill: "none", strokeWidth: 1.9, strokeLinecap: "round", strokeLinejoin: "round" };
   return (
     <div className="mobile-only" style={{
@@ -783,11 +784,16 @@ const DENSITY = {
 function OrderBar({ count, total, onClick }) {
   const popKey = useRef(0);
   const prev = useRef(count);
+  const firstRef = useRef(true);
   if (count !== prev.current) { prev.current = count; popKey.current++; }
+  const isFirst = firstRef.current; firstRef.current = false;
   if (!count) return null;
+  const anim = isFirst
+    ? "ob-in .34s cubic-bezier(.23,1,.32,1)"
+    : (popKey.current ? "ob-pop .32s cubic-bezier(.3,1.4,.5,1)" : "none");
   return (
     <div className="order-bar">
-      <button key={popKey.current} onClick={onClick} style={{ animation: popKey.current ? "ob-pop .32s cubic-bezier(.3,1.4,.5,1)" : "none",
+      <button key={popKey.current} onClick={onClick} style={{ animation: anim,
         width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "13px 18px",
         borderRadius: 14, background: "var(--accent)", color: "var(--on-accent)",
         boxShadow: "0 8px 24px rgba(14,95,102,.34)", border: "none"
@@ -1057,12 +1063,13 @@ function Sidebar({ query, setQuery, categories, active, goTo, showActions, onCal
         {categories.map(c => {
           const on = c.id === active;
           return (
-            <button key={c.id} onClick={() => goTo(c.id)} style={{
+            <button key={c.id} data-on={on} className="cat-nav-btn" onClick={() => goTo(c.id)} style={{
               display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%",
               textAlign: "left", padding: "9px 12px", borderRadius: 9, marginBottom: 1,
               background: on ? "var(--accent-soft)" : "transparent",
               color: on ? "var(--accent-deep)" : "var(--ink-2)",
-              fontSize: 13.5, fontWeight: on ? 600 : 500, transition: "background .15s"
+              boxShadow: on ? "inset 3px 0 0 var(--accent)" : "none",
+              fontSize: 13.5, fontWeight: on ? 600 : 500
             }}>
               <span>{c.en}</span>
               <span className="ar" style={{ fontSize: 12, opacity: .75 }}>{c.ar}</span>
